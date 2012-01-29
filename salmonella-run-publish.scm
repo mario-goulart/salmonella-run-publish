@@ -24,7 +24,6 @@
 ;; - loop reading commands output port instead of read-all
 ;; - substitute system `rm' by some scheme code
 ;; - local-mode
-;; - generate feeds
 ;; - notify vandusen
 
 (use posix utils srfi-1 irregex http-client)
@@ -105,7 +104,7 @@
           (append '("bzip2"
                     "git"
                     "salmonella"
-                    ; "salmonella-feeds" ;; FIXME
+                    "salmonella-feeds"
                     "salmonella-html-report")
                   (if (local-mode?)
                       '("henrietta-cache"
@@ -129,7 +128,7 @@
           (print "The following programs are required but could not be found:")
           (for-each print missing-programs)))
       (exit 1))))
-  
+
 
 (define (debug . things)
   (let ((msg (string-intersperse (map ->string things) "")))
@@ -274,11 +273,36 @@
     (unless (file-exists? feeds-dir)
             (create-directory feeds-dir 'with-parents))
 
-    ;; Generate the atom feeds -- FIXME
+    ;; Generate the atom feeds
+    (! `(salmonella-feeds --log-file=salmonella.log
+                          --feeds-server=http://tests.call-cc.org
+                          ,(string-append "--feeds-web-dir="
+                                          (make-absolute-pathname
+                                           (list "feeds"
+                                                 (chicken-core-branch)
+                                                 software-platform)
+                                           hardware-platform))
+                          ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
+                                          (make-absolute-pathname
+                                           (list (chicken-core-branch)
+                                                 software-platform
+                                                 hardware-platform
+                                                 year
+                                                 month
+                                                 day)
+                                           "salmonella-report"))
+                          ,(string-append "--feeds-dir="
+                                          (make-pathname
+                                           (list (web-dir)
+                                                 "feeds"
+                                                 (chicken-core-branch)
+                                                 software-platform)
+                                           hardware-platform)))
+       (tmp-dir))
 
     ;; Generate the HTML report
-    (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir)) 
-    
+    (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
+
     (! `(bzip2 -9 salmonella.log) (tmp-dir))
 
     (for-each (lambda (file)
@@ -316,7 +340,7 @@
     (load (car args)))
 
   (check-required-programs!)
-  
+
   ;; Create the tmp dir if it does not exists
   (unless (file-exists? (tmp-dir))
     (create-directory (tmp-dir) 'parents-too))
