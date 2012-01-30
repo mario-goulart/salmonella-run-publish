@@ -19,6 +19,7 @@
 ;; - git
 ;; - bzip2
 ;; - chicken tools (chicken, csi, chicken-install)
+;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
 
 ;; TODO
 ;; - loop reading commands output port instead of read-all
@@ -102,6 +103,7 @@
 (define (check-required-programs!)
   (let* ((required-programs
           (append '("bzip2"
+                    "dot"
                     "git"
                     "salmonella"
                     "salmonella-feeds"
