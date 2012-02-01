@@ -187,7 +187,9 @@
     (if (file-exists? chicken-core-dir)
         (begin
           (! `(git checkout ,(chicken-core-branch)) chicken-core-dir)
-          (! '(git pull) chicken-core-dir))
+          (! '(git pull) chicken-core-dir)
+          (! '(git clean -f) chicken-core-dir)
+          (! '(git checkout -f) chicken-core-dir))
         (! `(git clone -b ,(chicken-core-branch) ,(chicken-core-git-uri)) (tmp-dir)))
 
     ;; make boot-chicken
