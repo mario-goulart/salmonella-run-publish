@@ -172,6 +172,7 @@
       (unless (zero? exit-status)
         (debug "Command '" cmd "' exited abnormally with status " exit-status)
         (debug output)
+        (publish-results)
         (exit exit-status))
       (cons exit-status output))))
 
@@ -277,43 +278,46 @@
     (unless (file-exists? feeds-dir)
             (create-directory feeds-dir 'with-parents))
 
-    ;; Generate the atom feeds
-    (! `(salmonella-feeds --log-file=salmonella.log
-                          --feeds-server=http://tests.call-cc.org
-                          ,(string-append "--feeds-web-dir="
-                                          (make-absolute-pathname
-                                           (list "feeds"
-                                                 (chicken-core-branch)
-                                                 software-platform)
-                                           hardware-platform))
-                          ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
-                                          (make-absolute-pathname
-                                           (list (chicken-core-branch)
-                                                 software-platform
-                                                 hardware-platform
-                                                 year
-                                                 month
-                                                 day)
-                                           "salmonella-report"))
-                          ,(string-append "--feeds-dir="
-                                          (make-pathname
-                                           (list (web-dir)
-                                                 "feeds"
-                                                 (chicken-core-branch)
-                                                 software-platform)
-                                           hardware-platform)))
-       (tmp-dir))
+    (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
+      ;; Generate the atom feeds
+      (! `(salmonella-feeds --log-file=salmonella.log
+                            --feeds-server=http://tests.call-cc.org
+                            ,(string-append "--feeds-web-dir="
+                                            (make-absolute-pathname
+                                             (list "feeds"
+                                                   (chicken-core-branch)
+                                                   software-platform)
+                                             hardware-platform))
+                            ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
+                                            (make-absolute-pathname
+                                             (list (chicken-core-branch)
+                                                   software-platform
+                                                   hardware-platform
+                                                   year
+                                                   month
+                                                   day)
+                                             "salmonella-report"))
+                            ,(string-append "--feeds-dir="
+                                            (make-pathname
+                                             (list (web-dir)
+                                                   "feeds"
+                                                   (chicken-core-branch)
+                                                   software-platform)
+                                             hardware-platform)))
+         (tmp-dir))
 
-    ;; Generate the HTML report
-    (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
+      ;; Generate the HTML report
+      (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
 
-    (! `(bzip2 -9 salmonella.log) (tmp-dir))
+      (! `(bzip2 -9 salmonella.log) (tmp-dir))
 
-    (for-each (lambda (file)
-                (! `(cp -R ,file ,publish-dir) (tmp-dir)))
-              `("salmonella-report"
-                "salmonella.log.bz2"
-                ,(log-file)))))
+      (for-each (lambda (file)
+                  (! `(cp -R ,file ,publish-dir) (tmp-dir)))
+                `("salmonella-report"
+                  "salmonella.log.bz2")))
+
+    ;; Copy salmonella-run-publish log file to the publish dir
+    (! `(cp -R ,(log-file) ,publish-dir) (tmp-dir))))
 
 
 (define (usage #!optional exit-code)
