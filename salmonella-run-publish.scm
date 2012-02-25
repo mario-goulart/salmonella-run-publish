@@ -107,10 +107,10 @@
                     "git"
                     "salmonella"
                     "salmonella-feeds"
-                    "salmonella-html-report")
+                    "salmonella-html-report"
+                    "svn")
                   (if (local-mode?)
-                      '("henrietta-cache"
-                        "svn")
+                      '("henrietta-cache")
                       '())
                   (if (chicken-bootstrap-prefix)
                       '()
@@ -232,6 +232,7 @@
                 salmonella.log.bz2
                 salmonella-repo
                 ,(log-file)
+                custom-feeds
                 salmonella-report))
 
     ;; Build chicken
@@ -272,6 +273,7 @@
                                          (chicken-core-branch)
                                          software-platform)
                                    hardware-platform))
+         (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds"))
          (today-path (make-pathname (list year month) day)))
 
     (unless (file-exists? publish-dir)
@@ -280,33 +282,44 @@
     (unless (file-exists? feeds-dir)
             (create-directory feeds-dir 'with-parents))
 
+    (! `(svn co --username=anonymous --password=
+             https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds
+             custom-feeds)
+       (tmp-dir))
+
     (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
-      ;; Generate the atom feeds
-      (! `(salmonella-feeds --log-file=salmonella.log
-                            --feeds-server=http://tests.call-cc.org
-                            ,(string-append "--feeds-web-dir="
-                                            (make-absolute-pathname
-                                             (list "feeds"
-                                                   (chicken-core-branch)
-                                                   software-platform)
-                                             hardware-platform))
-                            ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
-                                            (make-absolute-pathname
-                                             (list (chicken-core-branch)
-                                                   software-platform
-                                                   hardware-platform
-                                                   year
-                                                   month
-                                                   day)
-                                             "salmonella-report"))
-                            ,(string-append "--feeds-dir="
-                                            (make-pathname
-                                             (list (web-dir)
-                                                   "feeds"
-                                                   (chicken-core-branch)
-                                                   software-platform)
-                                             hardware-platform)))
-         (tmp-dir))
+      (let* ((feeds-web-dir
+              (make-absolute-pathname (list "feeds"
+                                            (chicken-core-branch)
+                                            software-platform)
+                                      hardware-platform))
+             (custom-feeds-web-dir
+              (make-absolute-pathname feeds-web-dir "custom")))
+        ;; Generate the atom feeds
+        (! `(salmonella-feeds --log-file=salmonella.log
+                              --feeds-server=http://tests.call-cc.org
+                              ,(string-append "--feeds-web-dir=" feeds-web-dir)
+                              ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
+                                              (make-absolute-pathname
+                                               (list (chicken-core-branch)
+                                                     software-platform
+                                                     hardware-platform
+                                                     year
+                                                     month
+                                                     day)
+                                               "salmonella-report"))
+                              ,(string-append "--feeds-dir="
+                                              (make-pathname
+                                               (list (web-dir)
+                                                     "feeds"
+                                                     (chicken-core-branch)
+                                                     software-platform)
+                                               hardware-platform))
+                              ,(string-append "--custom-feeds-dir=" custom-feeds-dir)
+                              ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
+                              ,(string-append "--custom-feeds-out-dir="
+                                              (make-pathname feeds-dir "custom")))
+           (tmp-dir)))
 
       ;; Generate the HTML report
       (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
