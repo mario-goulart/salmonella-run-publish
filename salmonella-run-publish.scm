@@ -106,6 +106,7 @@
                     "dot"
                     "git"
                     "salmonella"
+                    "salmonella-diff"
                     "salmonella-feeds"
                     "salmonella-html-report"
                     "svn")
@@ -256,28 +257,87 @@
            (string-intersperse (map symbol->string (list-eggs))))))))
 
 
-(define (publish-results)
-  (let* ((now (seconds->local-time))
-         (day (pad-number (vector-ref now 3) 2))
-         (month (pad-number (add1 (vector-ref now 4)) 2))
-         (year (number->string (+ 1900 (vector-ref now 5))))
-         (publish-dir (make-pathname (list (web-dir)
-                                           (chicken-core-branch)
-                                           software-platform
-                                           hardware-platform
-                                           year
-                                           month)
-                                     day))
-         (feeds-dir (make-pathname (list (web-dir)
+(define publish-base-dir
+  ;; Publishing directory, without yyyy/mm/dd.  It has to be a
+  ;; procedure because we need to delay the determination of the
+  ;; publish dir until the `chicken-core-branch' parameter is set.
+  (let ((dir #f))
+    (lambda ()
+      (unless dir
+        (set! dir (make-pathname (list (web-dir)
+                                       (chicken-core-branch)
+                                       software-platform)
+                                 hardware-platform)))
+      dir)))
+
+
+(define publish-dir
+  ;; Final publishing directory, with yyyy/mm/dd
+  (let ((dir #f))
+    (lambda ()
+      (unless dir
+        (let* ((now (seconds->local-time))
+               (day (pad-number (vector-ref now 3) 2))
+               (month (pad-number (add1 (vector-ref now 4)) 2))
+               (year (number->string (+ 1900 (vector-ref now 5)))))
+          (set! dir (make-pathname (list (publish-base-dir)
+                                         year
+                                         month)
+                                   day))))
+      dir)))
+
+
+(define publish-web-dir
+  ;; Final publishing directory, with yyyy/mm/dd
+  (let ((dir #f))
+    (lambda ()
+      (unless dir
+        (let* ((now (seconds->local-time))
+               (day (pad-number (vector-ref now 3) 2))
+               (month (pad-number (add1 (vector-ref now 4)) 2))
+               (year (number->string (+ 1900 (vector-ref now 5)))))
+          (set! dir (make-absolute-pathname
+                     (list (chicken-core-branch)
+                           software-platform
+                           hardware-platform
+                           year
+                           month)
+                     day))))
+      dir)))
+
+
+(define (diff)
+  (let* ((yesterday (seconds->local-time (- (current-seconds) (* 24 60 60))))
+         (yesterday-day (pad-number (vector-ref yesterday 3) 2))
+         (yesterday-month (pad-number (add1 (vector-ref yesterday 4)) 2))
+         (yesterday-year (number->string (+ 1900 (vector-ref yesterday 5))))
+         (yesterday-path (make-pathname (list yesterday-year yesterday-month)
+                                        yesterday-day))
+         (yesterday-clog (make-pathname (list (publish-base-dir) yesterday-path)
+                                        "salmonella.log.bz2"))
+         (today-log (make-pathname (tmp-dir) "salmonella.log")))
+    (when (file-exists? yesterday-clog)
+      ;; Uncompress yesterday's log
+      (! `(bzip2 -d -c ,yesterday-clog > yesterday.log)
+         (tmp-dir))
+      (! `(salmonella-diff --out-dir=yesterday-diff
+                           --label1=Yesterday
+                           --label2=Today
+                           yesterday.log
+                           ,today-log)
+         (tmp-dir)))))
+
+
+(define (process-results)
+  (let* ((feeds-dir (make-pathname (list (web-dir)
                                          "feeds"
                                          (chicken-core-branch)
                                          software-platform)
                                    hardware-platform))
-         (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds"))
-         (today-path (make-pathname (list year month) day)))
+         (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
 
-    (unless (file-exists? publish-dir)
-            (create-directory publish-dir 'with-parents))
+    (unless (file-exists? (publish-dir))
+            (create-directory (publish-dir) 'with-parents))
 
     (unless (file-exists? feeds-dir)
             (create-directory feeds-dir 'with-parents))
@@ -300,14 +360,8 @@
                               --feeds-server=http://tests.call-cc.org
                               ,(string-append "--feeds-web-dir=" feeds-web-dir)
                               ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
-                                              (make-absolute-pathname
-                                               (list (chicken-core-branch)
-                                                     software-platform
-                                                     hardware-platform
-                                                     year
-                                                     month
-                                                     day)
-                                               "salmonella-report"))
+                                              (make-pathname (publish-web-dir)
+                                                             "salmonella-report"))
                               ,(string-append "--feeds-dir="
                                               (make-pathname
                                                (list (web-dir)
@@ -324,15 +378,20 @@
       ;; Generate the HTML report
       (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
 
-      (! `(bzip2 -9 salmonella.log) (tmp-dir))
+      ;; Generate diff against yesterday's log (if it exists)
+      (diff)
 
-      (for-each (lambda (file)
-                  (! `(cp -R ,file ,publish-dir) (tmp-dir)))
-                `("salmonella-report"
-                  "salmonella.log.bz2")))
+      (! `(bzip2 -9 salmonella.log) (tmp-dir)))))
 
-    ;; Copy salmonella-run-publish log file to the publish dir
-    (! `(cp -R ,(log-file) ,publish-dir) (tmp-dir))))
+
+(define (publish-results)
+  (for-each (lambda (file)
+              (when (file-exists? file)
+                (! `(cp -R ,file ,(publish-dir)) (tmp-dir))))
+            `(,(log-file)
+              "yesterday-diff"
+              "salmonella-report"
+              "salmonella.log.bz2")))
 
 
 (define (usage #!optional exit-code)
@@ -372,4 +431,5 @@
   (change-directory (tmp-dir))
 
   (run-salmonella)
+  (process-results)
   (publish-results))
