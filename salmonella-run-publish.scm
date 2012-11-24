@@ -340,7 +340,7 @@
             (create-directory (publish-dir) 'with-parents))
 
     (unless (file-exists? feeds-dir)
-            (create-directory feeds-dir 'with-parents))
+      (create-directory feeds-dir 'with-parents))
 
     (! `(svn co --username=anonymous --password=
              https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds
