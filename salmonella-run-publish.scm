@@ -283,7 +283,8 @@
           (set! dir (make-pathname (list (publish-base-dir)
                                          year
                                          month)
-                                   day))))
+                                   day))
+          (create-directory dir 'with-parents)))
       dir)))
 
 
@@ -335,9 +336,6 @@
                                          software-platform)
                                    hardware-platform))
          (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
-
-    (unless (file-exists? (publish-dir))
-            (create-directory (publish-dir) 'with-parents))
 
     (unless (file-exists? feeds-dir)
       (create-directory feeds-dir 'with-parents))
