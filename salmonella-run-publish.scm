@@ -27,7 +27,11 @@
 ;; - local-mode
 ;; - notify vandusen
 
-(use posix utils srfi-1 irregex http-client)
+(module salmonella-run-publish-app ()
+
+(import chicken scheme)
+(use posix utils srfi-1 srfi-13 irregex data-structures ports files extras)
+(use http-client)
 
 ;;
 ;; User-configurable parameters
@@ -431,3 +435,5 @@
   (run-salmonella)
   (process-results)
   (publish-results))
+
+) ;; end module
