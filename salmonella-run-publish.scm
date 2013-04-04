@@ -246,7 +246,8 @@
     ;; Run salmonella
     (! `(rm -rf ,salmonella-repo-dir))
     (! `(,(string-append
-           "LC_ALL=C LANG=C PATH=" (make-pathname chicken-prefix "bin") ":$PATH"
+           "BVSPIS_PATH=/usr/local/bvspis LC_ALL=C LANG=C PATH="
+           (make-pathname chicken-prefix "bin") ":$PATH"
            " salmonella"
            (if (null? skip-eggs)
                ""
