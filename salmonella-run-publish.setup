@@ -1,0 +1,7 @@
+;; -*- scheme -*-
+(compile -d0 -O3 salmonella-run-publish.scm)
+
+(install-program
+ 'salmonella-run-publish
+ '("salmonella-run-publish")
+ '((version "0.0.1")))
