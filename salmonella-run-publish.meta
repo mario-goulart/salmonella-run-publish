@@ -1,0 +1,6 @@
+;; -*- scheme -*-
+((synopsis "Run salmonella and publish results")
+ (author "Mario Domenech Goulart")
+ (category tools)
+ (license "BSD")
+ (depends http-client))
