@@ -1,7 +1,7 @@
 (module salmonella-run-publish-params
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
-  local-mode? web-dir verbose?)
+  local-mode? web-dir verbose? compress-report?)
 
 (import chicken scheme posix files)
 
@@ -58,6 +58,9 @@
    (make-pathname (current-directory) "salmonella-reports")))
 
 (define verbose?
+  (make-parameter #t))
+
+(define compress-report?
   (make-parameter #t))
 
 ) ;; end module

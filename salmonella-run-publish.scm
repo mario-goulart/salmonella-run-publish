@@ -324,7 +324,11 @@
            (tmp-dir)))
 
       ;; Generate the HTML report
-      (! `(salmonella-html-report salmonella.log salmonella-report) (tmp-dir))
+      (let ((compressed (if (compress-report?)
+                            `(--compress-html --compress-graphics)
+                            '())))
+        (! `(salmonella-html-report ,@compressed salmonella.log salmonella-report)
+           (tmp-dir)))
 
       ;; Generate diff against yesterday's log (if it exists)
       (diff)
