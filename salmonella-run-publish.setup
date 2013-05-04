@@ -1,5 +1,13 @@
 ;; -*- scheme -*-
+(compile -d0 -O3 -s -J salmonella-run-publish-params.scm)
+(compile -d0 -O3 -s salmonella-run-publish-params.import.scm)
 (compile -d0 -O3 salmonella-run-publish.scm)
+
+(install-extension
+ 'salmonella-run-publish-params
+ '("salmonella-run-publish-params.so"
+   "salmonella-run-publish-params.import.so")
+ '((version "0.0.1")))
 
 (install-program
  'salmonella-run-publish
