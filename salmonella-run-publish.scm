@@ -333,7 +333,8 @@
       ;; Generate diff against yesterday's log (if it exists)
       (diff)
 
-      (! `(bzip2 -9 salmonella.log) (tmp-dir)))))
+      (! `(bzip2 -9 salmonella.log) (tmp-dir))
+      (! `(gzip -9 -S z ,(log-file)) (tmp-dir)))))
 
 
 (define (publish-results)
