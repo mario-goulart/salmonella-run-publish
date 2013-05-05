@@ -341,7 +341,7 @@
   (for-each (lambda (file)
               (when (file-exists? file)
                 (! `(cp -R ,file ,(publish-dir)) (tmp-dir))))
-            `(,(log-file)
+            `(,(string-append (log-file) "z")
               "yesterday-diff"
               "salmonella-report"
               "salmonella.log.bz2")))
