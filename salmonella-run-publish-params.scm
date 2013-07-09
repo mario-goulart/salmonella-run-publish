@@ -41,8 +41,8 @@
   ;; salmonella's --skip-eggs
   (make-parameter
    (if (eq? (software-version) 'macosx)
-       '(proccpuinfo)
-       '(macosx objc hfs+ osxattr))))
+       '(proccpuinfo win32-msgbox)
+       '(macosx objc hfs+ osxattr win32-msgbox))))
 
 (define henrietta-uri
   (make-parameter "http://code.call-cc.org/cgi-bin/henrietta.cgi"))
