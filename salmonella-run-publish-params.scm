@@ -40,9 +40,10 @@
 (define skip-eggs
   ;; salmonella's --skip-eggs
   (make-parameter
-   (if (eq? (software-version) 'macosx)
-       '(proccpuinfo win32-msgbox)
-       '(macosx objc hfs+ osxattr win32-msgbox))))
+   (cons 'matlab
+         (if (eq? (software-version) 'macosx)
+             '(proccpuinfo win32-msgbox)
+             '(macosx objc hfs+ osxattr win32-msgbox)))))
 
 (define henrietta-uri
   (make-parameter "http://code.call-cc.org/cgi-bin/henrietta.cgi"))
