@@ -14,6 +14,7 @@
 ;; - salmonella
 ;; - salmonella-html-report
 ;; - salmonella-feeds
+;; - salmonella-diff
 ;; - henrietta-cache (only in local-mode)
 ;; - svn (only in local-mode)
 ;; - git
