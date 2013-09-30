@@ -38,6 +38,12 @@
 
 (define hardware-platform (symbol->string (machine-type)))
 
+(define make-platform
+  (or (get-environment-variable "PLATFORM")
+      (if (string-suffix? "bsd" software-platform)
+          "bsd"
+          software-platform)))
+
 (define program-available?
   (let ((paths (string-split (get-environment-variable "PATH") ":"))) ;; no windows support
     (lambda (program)
@@ -143,20 +149,20 @@
         (! `(git clone -b ,(chicken-core-branch) ,(chicken-core-git-uri)) (tmp-dir)))
 
     ;; make boot-chicken
-    (! `(,(make-program) ,(string-append "PLATFORM=" software-platform
+    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " CHICKEN=" chicken-bootstrap)
          spotless clean confclean boot-chicken)
        chicken-core-dir)
 
     ;; make install
-    (! `(,(make-program) ,(string-append "PLATFORM=" software-platform
+    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          spotless install)
        chicken-core-dir)
 
     ;; make check
-    (! `(,(make-program) ,(string-append "PLATFORM=" software-platform
+    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          check)
