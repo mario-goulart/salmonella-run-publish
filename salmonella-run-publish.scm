@@ -3,11 +3,11 @@
 ;; generate the HTML reports.  It organizes the salmonella reports in
 ;; a directory tree like:
 ;;
-;; web-dir/chicken-core-branch/software-platform/hardware-platform/year/month/day
+;; web-dir/chicken-core-branch/c-compiler/software-platform/hardware-platform/year/month/day
 ;;
 ;; For example:
 ;;
-;; /var/www/salmonella-reports/master/linux/x86/2012/01/28
+;; /var/www/salmonella-reports/master/gcc/linux/x86/2012/01/28
 
 
 ;; The following external tools are required:
@@ -151,12 +151,14 @@
 
     ;; make boot-chicken
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
+                                         " C_COMPILER=" (c-compiler)
                                          " CHICKEN=" chicken-bootstrap)
          spotless clean confclean boot-chicken)
        chicken-core-dir)
 
     ;; make install
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
+                                         " C_COMPILER=" (c-compiler)
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          spotless install)
@@ -164,6 +166,7 @@
 
     ;; make check
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
+                                         " C_COMPILER=" (c-compiler)
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          check)
@@ -223,6 +226,7 @@
       (unless dir
         (set! dir (make-pathname (list (web-dir)
                                        (chicken-core-branch)
+                                       (pathname-file (c-compiler))
                                        software-platform)
                                  hardware-platform)))
       dir)))
