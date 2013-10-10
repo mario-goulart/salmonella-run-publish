@@ -3,4 +3,8 @@
  (author "Mario Domenech Goulart")
  (category tools)
  (license "BSD")
- (depends http-client))
+ (depends http-client
+          salmonella
+          salmonella-diff
+          salmonella-feeds
+          salmonella-html-report))
