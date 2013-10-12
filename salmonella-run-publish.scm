@@ -225,7 +225,7 @@
     (lambda ()
       (unless dir
         (set! dir (make-pathname (list (web-dir)
-                                       (chicken-core-branch)
+                                       ((branch-publish-transformer) (chicken-core-branch))
                                        (pathname-file (c-compiler))
                                        software-platform)
                                  hardware-platform)))

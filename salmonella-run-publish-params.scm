@@ -1,7 +1,8 @@
 (module salmonella-run-publish-params
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
-  local-mode? web-dir verbose? compress-report? c-compiler)
+  local-mode? web-dir verbose? compress-report? c-compiler
+  branch-publish-transformer)
 
 (import chicken scheme posix files)
 
@@ -66,5 +67,10 @@
 
 (define c-compiler
   (make-parameter "gcc"))
+
+(define branch-publish-transformer
+  (make-parameter
+   (lambda (branch)
+     branch)))
 
 ) ;; end module
