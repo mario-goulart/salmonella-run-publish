@@ -226,7 +226,8 @@
       (unless dir
         (set! dir (make-pathname (list (web-dir)
                                        ((branch-publish-transformer) (chicken-core-branch))
-                                       (pathname-file (c-compiler))
+                                       (or (c-compiler-publish-name)
+                                           (pathname-file (c-compiler)))
                                        software-platform)
                                  hardware-platform)))
       dir)))

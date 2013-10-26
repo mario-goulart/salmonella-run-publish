@@ -2,7 +2,7 @@
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   local-mode? web-dir verbose? compress-report? c-compiler
-  branch-publish-transformer)
+  branch-publish-transformer c-compiler-publish-name)
 
 (import chicken scheme posix files)
 
@@ -67,6 +67,13 @@
 
 (define c-compiler
   (make-parameter "gcc"))
+
+(define c-compiler-publish-name
+  ;; This parameter can be useful to publish the compiler name without
+  ;; the version, for example.  Sometimes you need to set c-compiler
+  ;; to, say, gcc-4.6 but want reports to be published under the `gcc'
+  ;; name.  So, you just set c-compiler-publish-name to "gcc".
+  (make-parameter #f))
 
 (define branch-publish-transformer
   (make-parameter
