@@ -261,6 +261,7 @@
                (year (number->string (+ 1900 (vector-ref now 5)))))
           (set! dir (make-absolute-pathname
                      (list ((branch-publish-transformer) (chicken-core-branch))
+                           (or (c-compiler-publish-name) (pathname-file (c-compiler)))
                            software-platform
                            hardware-platform
                            year
@@ -295,6 +296,7 @@
   (let* ((feeds-dir (make-pathname (list (web-dir)
                                          "feeds"
                                          ((branch-publish-transformer) (chicken-core-branch))
+                                         (or (c-compiler-publish-name) (pathname-file (c-compiler)))
                                          software-platform)
                                    hardware-platform))
          (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
@@ -311,6 +313,7 @@
       (let* ((feeds-web-dir
               (make-absolute-pathname (list "feeds"
                                             ((branch-publish-transformer) (chicken-core-branch))
+                                            (or (c-compiler-publish-name) (pathname-file (c-compiler)))
                                             software-platform)
                                       hardware-platform))
              (custom-feeds-web-dir
