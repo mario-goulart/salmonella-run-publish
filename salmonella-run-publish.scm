@@ -260,7 +260,7 @@
                (month (pad-number (add1 (vector-ref now 4)) 2))
                (year (number->string (+ 1900 (vector-ref now 5)))))
           (set! dir (make-absolute-pathname
-                     (list (chicken-core-branch)
+                     (list ((branch-publish-transformer) (chicken-core-branch))
                            software-platform
                            hardware-platform
                            year
@@ -294,7 +294,7 @@
 (define (process-results)
   (let* ((feeds-dir (make-pathname (list (web-dir)
                                          "feeds"
-                                         (chicken-core-branch)
+                                         ((branch-publish-transformer) (chicken-core-branch))
                                          software-platform)
                                    hardware-platform))
          (custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
@@ -310,7 +310,7 @@
     (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
       (let* ((feeds-web-dir
               (make-absolute-pathname (list "feeds"
-                                            (chicken-core-branch)
+                                            ((branch-publish-transformer) (chicken-core-branch))
                                             software-platform)
                                       hardware-platform))
              (custom-feeds-web-dir
@@ -322,13 +322,7 @@
                               ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
                                               (make-pathname (publish-web-dir)
                                                              "salmonella-report"))
-                              ,(string-append "--feeds-dir="
-                                              (make-pathname
-                                               (list (web-dir)
-                                                     "feeds"
-                                                     (chicken-core-branch)
-                                                     software-platform)
-                                               hardware-platform))
+                              ,(string-append "--feeds-dir=" feeds-dir)
                               ,(string-append "--custom-feeds-dir=" custom-feeds-dir)
                               ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
                               ,(string-append "--custom-feeds-out-dir="
