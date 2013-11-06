@@ -48,7 +48,7 @@
        ((linux) (append macosx-only windows-only))
        ((bsd) (append linux-only macosx-only windows-only))
        ((macosx) (append linux-only windows-only))
-       ((windows (append linux-only macosx-only)))
+       ((windows) (append linux-only macosx-only))
        (else '())))))
 
 (define henrietta-uri
