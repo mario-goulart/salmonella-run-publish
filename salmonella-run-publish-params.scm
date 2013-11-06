@@ -41,10 +41,15 @@
 (define skip-eggs
   ;; salmonella's --skip-eggs
   (make-parameter
-   (cons 'matlab
-         (if (eq? (software-version) 'macosx)
-             '(proccpuinfo win32-msgbox)
-             '(macosx objc hfs+ osxattr win32-msgbox)))))
+   (let ((linux-only '(proccpuinfo))
+         (macosx-only '(macosx objc hfs+ osxattr))
+         (windows-only '(win32-msgbox matlab)))
+     (case (software-version)
+       ((linux) (append macosx-only windows-only))
+       ((bsd) (append linux-only macosx-only windows-only))
+       ((macosx) (append linux-only windows-only))
+       ((windows (append linux-only macosx-only)))
+       (else '())))))
 
 (define henrietta-uri
   (make-parameter "http://code.call-cc.org/cgi-bin/henrietta.cgi"))
