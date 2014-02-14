@@ -269,7 +269,7 @@
 
 (define (publish-results publish-dir)
   (! `(bzip2 -9 salmonella.log) (tmp-dir))
-  (! `(gzip -9 -S z ,(log-file)) (tmp-dir))
+  (! `(gzip -9 -f -S z ,(log-file)) (tmp-dir))
   (for-each (lambda (file)
               (when (file-exists? file)
                 (! `(cp -R ,file ,publish-dir) (tmp-dir))))
