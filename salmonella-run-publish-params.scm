@@ -2,7 +2,7 @@
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   local-mode? web-dir verbose? compress-report? c-compiler
-  branch-publish-transformer c-compiler-publish-name)
+  branch-publish-transformer c-compiler-publish-name feeds-server)
 
 (import chicken scheme posix files)
 
@@ -84,5 +84,8 @@
   (make-parameter
    (lambda (branch)
      branch)))
+
+(define feeds-server
+  (make-parameter "tests.call-cc.org"))
 
 ) ;; end module

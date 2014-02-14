@@ -244,7 +244,7 @@
              (make-absolute-pathname feeds-web-dir "custom")))
         ;; Generate the atom feeds
         (! `(salmonella-feeds --log-file=salmonella.log
-                              --feeds-server=http://tests.call-cc.org
+                              ,(string-append "--feeds-server=http://" (feeds-server))
                               ,(string-append "--feeds-web-dir=" feeds-web-dir)
                               ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
                                               (make-pathname publish-web-dir
@@ -309,8 +309,7 @@
   (check-required-programs!)
 
   ;; Create the tmp dir if it does not exists
-  (unless (file-exists? (tmp-dir))
-    (create-directory (tmp-dir) 'parents-too))
+  (create-directory (tmp-dir) 'parents-too)
 
   ;; Change to the tmp dir
   (change-directory (tmp-dir))
