@@ -268,6 +268,7 @@
 
 
 (define (publish-results publish-dir)
+  (create-directory publish-dir 'with-parents)
   (! `(bzip2 -9 salmonella.log) (tmp-dir))
   (! `(gzip -9 -f -S z ,(log-file)) (tmp-dir))
   (for-each (lambda (file)
@@ -352,8 +353,6 @@
          ;; Feeds stuff
          (feeds-dir (make-pathname (list (web-dir) "feeds") path-layout))
          (feeds-web-dir (make-absolute-pathname "feeds" path-layout)))
-
-    (create-directory publish-dir 'with-parents)
 
     (handle-exceptions exn
       (begin
