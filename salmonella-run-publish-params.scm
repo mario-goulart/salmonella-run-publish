@@ -4,7 +4,8 @@
   local-mode? web-dir verbose? compress-report? c-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server)
 
-(import chicken scheme posix files)
+(import chicken scheme)
+(use posix files)
 
 ;;
 ;; User-configurable parameters
