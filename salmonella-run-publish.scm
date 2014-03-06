@@ -246,9 +246,10 @@
         (! `(salmonella-feeds --log-file=salmonella.log
                               ,(string-append "--feeds-server=http://" (feeds-server))
                               ,(string-append "--feeds-web-dir=" feeds-web-dir)
-                              ,(string-append "--salmonella-report-uri=http://tests.call-cc.org"
-                                              (make-pathname publish-web-dir
-                                                             "salmonella-report"))
+                              ,(string-append "--salmonella-report-uri=http://"
+                                              (feeds-server)
+                                              (make-absolute-pathname publish-web-dir
+                                                                      "salmonella-report"))
                               ,(string-append "--feeds-dir=" feeds-dir)
                               ,(string-append "--custom-feeds-dir=" custom-feeds-dir)
                               ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
