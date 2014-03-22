@@ -21,6 +21,8 @@
 ;; - bzip2
 ;; - chicken tools (chicken, csi, chicken-install)
 ;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
+;; - tar
+;; - gzip if (create-report-tarball) yields 'gzip.
 
 ;; TODO
 ;; - loop reading commands output port instead of read-all
@@ -65,14 +67,18 @@
                     "salmonella-diff"
                     "salmonella-feeds"
                     "salmonella-html-report"
-                    "svn")
+                    "svn"
+                    "tar")
                   (if (local-mode?)
                       '("henrietta-cache")
                       '())
                   (if (chicken-bootstrap-prefix)
                       '()
                       '("csi"
-                        "chicken"))))
+                        "chicken"))
+                  (if (eq? (create-report-tarball) 'gzip)
+                      '("gzip")
+                      '())))
          (missing-programs (remove program-available? required-programs)))
     (when (chicken-bootstrap-prefix)
       (unless (and (file-exists?
@@ -278,7 +284,20 @@
             `(,(string-append (log-file) "z")
               "yesterday-diff"
               "salmonella-report"
-              "salmonella.log.bz2")))
+              "salmonella.log.bz2"))
+  (when (create-report-tarball)
+    (! `(tar ,(case (create-report-tarball)
+                ((gzip) 'czf)
+                ((bzip2) 'cjf)
+                (else 'cf))
+             ,(string-append "salmonella-report.tar"
+                             (case (create-report-tarball)
+                               ((gzip) ".gz")
+                               ((bzip2) ".bz2")
+                               (else "")))
+             "salmonella-report")
+       publish-dir)
+    (! `(rm -rf "salmonella-report") publish-dir)))
 
 
 (define (usage #!optional exit-code)

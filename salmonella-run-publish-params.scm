@@ -2,7 +2,8 @@
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   local-mode? web-dir verbose? compress-report? c-compiler
-  branch-publish-transformer c-compiler-publish-name feeds-server)
+  branch-publish-transformer c-compiler-publish-name feeds-server
+  create-report-tarball)
 
 (import chicken scheme)
 (use posix files)
@@ -88,5 +89,13 @@
 
 (define feeds-server
   (make-parameter "tests.call-cc.org"))
+
+(define create-report-tarball
+  (make-parameter #f
+                  (lambda (v)
+                    ;; #t is equivalent to tar (no compression)
+                    (unless (or (boolean? v)
+                                (memq v '(tar gzip bzip2)))
+                      (error 'create-report-tarball? "Invalid value" v)))))
 
 ) ;; end module
