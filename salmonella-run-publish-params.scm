@@ -94,8 +94,9 @@
   (make-parameter #f
                   (lambda (v)
                     ;; #t is equivalent to tar (no compression)
-                    (unless (or (boolean? v)
-                                (memq v '(tar gzip bzip2)))
-                      (error 'create-report-tarball? "Invalid value" v)))))
+                    (if (or (boolean? v)
+                            (memq v '(tar gzip bzip2)))
+                        v
+                        (error 'create-report-tarball? "Invalid value" v)))))
 
 ) ;; end module
