@@ -284,16 +284,21 @@
               "salmonella-report"
               "salmonella.log.bz2"))
   (when (create-report-tarball)
-    (! `(tar ,(case (create-report-tarball)
-                ((gzip) 'czf)
-                ((bzip2) 'cjf)
-                (else 'cf))
-             ,(string-append "salmonella-report.tar"
-                             (case (create-report-tarball)
-                               ((gzip) ".gz")
-                               ((bzip2) ".bz2")
-                               (else "")))
-             "salmonella-report")
+    (! (append
+        (case (create-report-tarball)
+          ((gzip) '(GZIP=-9))
+          ((bzip2) '(BZIP2=-9))
+          (else '()))
+        `(tar ,(case (create-report-tarball)
+                 ((gzip) 'czf)
+                 ((bzip2) 'cjf)
+                 (else 'cf))
+              ,(string-append "salmonella-report.tar"
+                              (case (create-report-tarball)
+                                ((gzip) ".gz")
+                                ((bzip2) ".bz2")
+                                (else "")))
+              "salmonella-report"))
        publish-dir)
     (! `(rm -rf "salmonella-report") publish-dir)))
 
