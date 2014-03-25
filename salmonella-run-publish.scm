@@ -22,7 +22,7 @@
 ;; - chicken tools (chicken, csi, chicken-install)
 ;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
 ;; - tar
-;; - gzip if (create-report-tarball) yields 'gzip.
+;; - gzip
 
 ;; TODO
 ;; - loop reading commands output port instead of read-all
@@ -63,6 +63,7 @@
           (append '("bzip2"
                     "dot"
                     "git"
+                    "gzip"
                     "salmonella"
                     "salmonella-diff"
                     "salmonella-feeds"
@@ -75,10 +76,7 @@
                   (if (chicken-bootstrap-prefix)
                       '()
                       '("csi"
-                        "chicken"))
-                  (if (eq? (create-report-tarball) 'gzip)
-                      '("gzip")
-                      '())))
+                        "chicken"))))
          (missing-programs (remove program-available? required-programs)))
     (when (chicken-bootstrap-prefix)
       (unless (and (file-exists?
