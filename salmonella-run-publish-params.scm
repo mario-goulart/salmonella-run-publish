@@ -3,7 +3,7 @@
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   local-mode? web-dir verbose? compress-report? c-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
-  create-report-tarball)
+  create-report-tarball salmonella-diff-link-mode?)
 
 (import chicken scheme)
 (use posix files)
@@ -98,5 +98,8 @@
                             (memq v '(tar gzip bzip2)))
                         v
                         (error 'create-report-tarball? "Invalid value" v)))))
+
+(define salmonella-diff-link-mode?
+  (make-parameter #f))
 
 ) ;; end module

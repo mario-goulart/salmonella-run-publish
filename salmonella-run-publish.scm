@@ -217,7 +217,7 @@
            (string-intersperse (map symbol->string (list-eggs))))))))
 
 
-(define (diff publish-base-dir publish-web-dir yesterday-dir)
+(define (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir)
   (let ((yesterday-clog (make-pathname (list publish-base-dir yesterday-dir)
                                        "salmonella.log.bz2"))
         (today-log (make-pathname (tmp-dir) "salmonella.log")))
@@ -228,12 +228,21 @@
       (! `(salmonella-diff --out-dir=yesterday-diff
                            --label1=Yesterday
                            --label2=Today
+                           ,(if (salmonella-diff-link-mode?)
+                                (string-append "--report-uri1="
+                                               (make-pathname yesterday-web-dir
+                                                              "salmonella-report")
+                                               " "
+                                               "--report-uri2="
+                                               (make-pathname publish-web-dir
+                                                              "salmonella-report"))
+                                "")
                            yesterday.log
                            ,today-log)
          (tmp-dir)))))
 
 
-(define (process-results publish-base-dir publish-web-dir yesterday-dir feeds-dir feeds-web-dir)
+(define (process-results publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir feeds-dir feeds-web-dir)
   (let ((custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
 
     (create-directory feeds-dir 'with-parents)
@@ -269,7 +278,7 @@
            (tmp-dir)))
 
       ;; Generate diff against yesterday's log (if it exists)
-      (diff publish-base-dir publish-web-dir yesterday-dir))))
+      (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir))))
 
 
 (define (publish-results publish-dir)
@@ -360,6 +369,7 @@
          (yesterday-year (number->string (+ 1900 (vector-ref yesterday 5))))
          (yesterday-dir (make-pathname (list yesterday-year yesterday-month)
                                        yesterday-day))
+         (yesterday-web-dir (make-absolute-pathname path-layout yesterday-dir))
 
          ;; Final publishing directory (filesystem), with yyyy/mm/dd
          (publish-dir (make-pathname (list publish-base-dir
@@ -385,7 +395,7 @@
         (exit 1))
       (begin
         (run-salmonella)
-        (process-results publish-base-dir publish-web-dir yesterday-dir feeds-dir feeds-web-dir)))
+        (process-results publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir feeds-dir feeds-web-dir)))
 
     (publish-results publish-dir)))
 
