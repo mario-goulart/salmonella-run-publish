@@ -43,7 +43,7 @@
 (define skip-eggs
   ;; salmonella's --skip-eggs
   (make-parameter
-   (let ((linux-only '(proccpuinfo))
+   (let ((linux-only '(proccpuinfo udev))
          (macosx-only '(macosx objc hfs+ osxattr))
          (windows-only '(win32-msgbox matlab)))
      (case (software-version)
