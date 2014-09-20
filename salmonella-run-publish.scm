@@ -175,7 +175,7 @@
 
 (define (list-eggs)
   (with-input-from-request
-   (string-append (henrietta-uri) "?list=1")
+   (sprintf "~a?release=~a&list=1" (henrietta-uri) (chicken-release))
    #f
    read-file))
 
