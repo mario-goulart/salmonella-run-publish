@@ -1,7 +1,7 @@
 (module salmonella-run-publish-params
  (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
-  local-mode? web-dir verbose? compress-report? c-compiler
+  local-mode? web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release)
 
@@ -74,6 +74,9 @@
 
 (define c-compiler
   (make-parameter "gcc"))
+
+(define c++-compiler
+  (make-parameter "g++"))
 
 (define c-compiler-publish-name
   ;; This parameter can be useful to publish the compiler name without

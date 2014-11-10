@@ -152,6 +152,7 @@
     ;; make boot-chicken
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
+                                         " CXX_COMPILER=" (c++-compiler)
                                          " CHICKEN=" chicken-bootstrap)
          spotless clean confclean boot-chicken)
        chicken-core-dir)
@@ -159,6 +160,7 @@
     ;; make install
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
+                                         " CXX_COMPILER=" (c++-compiler)
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          spotless install)
@@ -167,6 +169,7 @@
     ;; make check
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
+                                         " CXX_COMPILER=" (c++-compiler)
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          check)
