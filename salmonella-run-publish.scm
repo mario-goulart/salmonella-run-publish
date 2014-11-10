@@ -210,7 +210,7 @@
                               (string-intersperse (map ->string (skip-eggs)) ",")))
            (if (keep-repo?)
                " --keep-repo"
-               "")
+               " --clear-chicken-home")
            " --repo-dir=" salmonella-repo-dir
            " --chicken-installation-prefix=" chicken-prefix
            " "
