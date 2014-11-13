@@ -220,14 +220,29 @@
            (string-intersperse (map symbol->string (list-eggs))))))))
 
 
+(define yesterday-log-path
+  ;; Return the path to the yesterday's log file if it exists; or #f
+  ;; if doesn't exist.
+  ;;
+  ;; The uncompressed log file is stored under (tmp-dir).
+  (let ((log-path 'not-set))
+    (lambda (publish-base-dir yesterday-dir)
+      (if (eq? log-path 'not-set)
+          (let ((yesterday-clog
+                 (make-pathname (list publish-base-dir yesterday-dir)
+                                "salmonella.log.bz2")))
+            (cond ((file-exists? yesterday-clog)
+                   (! `(bzip2 -d -c ,yesterday-clog > yesterday.log)
+                      (tmp-dir))
+                   (set! log-path (make-pathname (tmp-dir) "yesterday.log")))
+                  (else (set! log-path #f))))
+          log-path))))
+
+
 (define (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir)
-  (let ((yesterday-clog (make-pathname (list publish-base-dir yesterday-dir)
-                                       "salmonella.log.bz2"))
+  (let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir))
         (today-log (make-pathname (tmp-dir) "salmonella.log")))
-    (when (file-exists? yesterday-clog)
-      ;; Uncompress yesterday's log
-      (! `(bzip2 -d -c ,yesterday-clog > yesterday.log)
-         (tmp-dir))
+    (when yesterday-log
       (! `(salmonella-diff --out-dir=yesterday-diff
                            --label1=Yesterday
                            --label2=Today
@@ -240,7 +255,7 @@
                                                (make-pathname publish-web-dir
                                                               "salmonella-report"))
                                 "")
-                           yesterday.log
+                           ,yesterday-log
                            ,today-log)
          (tmp-dir)))))
 
@@ -259,18 +274,34 @@
       (let ((custom-feeds-web-dir
              (make-absolute-pathname feeds-web-dir "custom")))
         ;; Generate the atom feeds
-        (! `(salmonella-feeds --log-file=salmonella.log
-                              ,(string-append "--feeds-server=http://" (feeds-server))
-                              ,(string-append "--feeds-web-dir=" feeds-web-dir)
-                              ,(string-append "--salmonella-report-uri=http://"
-                                              (feeds-server)
-                                              (make-absolute-pathname publish-web-dir
-                                                                      "salmonella-report"))
-                              ,(string-append "--feeds-dir=" feeds-dir)
-                              ,(string-append "--custom-feeds-dir=" custom-feeds-dir)
-                              ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
-                              ,(string-append "--custom-feeds-out-dir="
-                                              (make-pathname feeds-dir "custom")))
+        (! `(salmonella-feeds
+             --log-file=salmonella.log
+             ,(string-append "--feeds-server=http://" (feeds-server))
+             ,(string-append "--feeds-web-dir=" feeds-web-dir)
+             ,(string-append "--salmonella-report-uri=http://"
+                             (feeds-server)
+                             (make-absolute-pathname publish-web-dir
+                                                     "salmonella-report"))
+             ,(string-append "--feeds-dir=" feeds-dir)
+             ,(string-append "--custom-feeds-dir=" custom-feeds-dir)
+             ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
+             ,(string-append "--custom-feeds-out-dir="
+                             (make-pathname feeds-dir "custom"))
+             ,@(let ((yesterday-log (yesterday-log-path  publish-base-dir yesterday-dir)))
+                 (if yesterday-log
+                     (list
+                      (string-append "--diff-against=" yesterday-log)
+                      (string-append "--diff-feed-file-path="
+                                     (make-pathname (list feeds-dir "diff")
+                                                    "yesterday"
+                                                    "xml"))
+                      (string-append "--diff-feed-web-file-path="
+                                     (make-pathname (list feeds-web-dir "diff")
+                                                    "yeterday"
+                                                    "xml"))
+                      (string-append "--diff-against-report-uri="
+                                     (make-pathname yesterday-web-dir "salmonella-report")))
+                     '())))
            (tmp-dir)))
 
       ;; Generate the HTML report
