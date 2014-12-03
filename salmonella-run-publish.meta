@@ -7,4 +7,6 @@
           salmonella
           salmonella-diff
           salmonella-feeds
-          salmonella-html-report))
+          salmonella-html-report)
+ (test-depends simple-sha1
+               test))
