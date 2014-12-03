@@ -3,7 +3,8 @@
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   local-mode? web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
-  create-report-tarball salmonella-diff-link-mode? chicken-release)
+  create-report-tarball salmonella-diff-link-mode? chicken-release
+  run-salmonella?)
 
 (import chicken scheme)
 (use posix files)
@@ -108,5 +109,8 @@
 ;; Currently only used to build up the henrietta URI to list eggs
 (define chicken-release
   (make-parameter 4))
+
+(define run-salmonella?
+  (make-parameter #t))
 
 ) ;; end module

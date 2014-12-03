@@ -397,7 +397,8 @@
         (publish-results publish-dir)
         (exit 1))
       (begin
-        (run-salmonella)
+        (when (run-salmonella?)
+          (run-salmonella))
         (process-results publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir feeds-dir feeds-web-dir)))
 
     (publish-results publish-dir)))
