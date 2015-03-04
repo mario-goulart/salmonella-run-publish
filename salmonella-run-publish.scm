@@ -297,7 +297,7 @@
                                                     "xml"))
                       (string-append "--diff-feed-web-file-path="
                                      (make-pathname (list feeds-web-dir "diff")
-                                                    "yeterday"
+                                                    "yesterday"
                                                     "xml"))
                       (string-append "--diff-against-report-uri="
                                      (make-pathname yesterday-web-dir "salmonella-report")))
