@@ -5,7 +5,7 @@
  (license "BSD")
  (depends http-client
           salmonella
-          salmonella-diff
+          (salmonella-diff "1.1")
           salmonella-feeds
           salmonella-html-report)
  (test-depends simple-sha1
