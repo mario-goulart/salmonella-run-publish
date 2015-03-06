@@ -301,8 +301,8 @@
                                                     "xml"))
                       (string-append "--diff-against-report-uri="
                                      (make-pathname yesterday-web-dir "salmonella-report"))
-                      "--diff-label1=today"
-                      "--diff-label2=yesterday")
+                      "--diff-label1=yesterday"
+                      "--diff-label2=today")
                      '())))
            (tmp-dir)))
 
