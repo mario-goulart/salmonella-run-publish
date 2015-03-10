@@ -260,7 +260,9 @@
          (tmp-dir)))))
 
 
-(define (process-results publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir feeds-dir feeds-web-dir)
+(define (process-results publish-base-dir publish-web-dir today-dir
+                         yesterday-dir yesterday-web-dir feeds-dir
+                         feeds-web-dir)
   (let ((custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
 
     (create-directory feeds-dir 'with-parents)
@@ -301,8 +303,8 @@
                                                     "xml"))
                       (string-append "--diff-against-report-uri="
                                      (make-pathname yesterday-web-dir "salmonella-report"))
-                      "--diff-label1=yesterday"
-                      "--diff-label2=today")
+                      (sprintf "--diff-label1='yesterday (~a)'" yesterday-dir)
+                      (sprintf "--diff-label2='today (~a)'" today-dir))
                      '())))
            (tmp-dir)))
 
@@ -397,6 +399,7 @@
          (day (pad-number (vector-ref now 3) 2))
          (month (pad-number (add1 (vector-ref now 4)) 2))
          (year (number->string (+ 1900 (vector-ref now 5))))
+         (today-dir (make-pathname (list year month) day))
 
          ;; Yesterday
          (yesterday (seconds->local-time (- (current-seconds) (* 24 60 60))))
@@ -408,16 +411,10 @@
          (yesterday-web-dir (make-absolute-pathname path-layout yesterday-dir))
 
          ;; Final publishing directory (filesystem), with yyyy/mm/dd
-         (publish-dir (make-pathname (list publish-base-dir
-                                           year
-                                           month)
-                                     day))
+         (publish-dir (make-pathname publish-base-dir today-dir))
 
          ;; Final web publishing directory, with yyyy/mm/dd
-         (publish-web-dir (make-absolute-pathname (list path-layout
-                                                        year
-                                                        month)
-                                                  day))
+         (publish-web-dir (make-absolute-pathname path-layout today-dir))
 
          ;; Feeds stuff
          (feeds-dir (make-pathname (list (web-dir) "feeds") path-layout))
@@ -432,7 +429,9 @@
       (begin
         (when (run-salmonella?)
           (run-salmonella))
-        (process-results publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir feeds-dir feeds-web-dir)))
+        (process-results publish-base-dir publish-web-dir today-dir
+                         yesterday-dir yesterday-web-dir feeds-dir
+                         feeds-web-dir)))
 
     (publish-results publish-dir)))
 
