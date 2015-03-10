@@ -287,7 +287,7 @@
              ,(string-append "--custom-feeds-web-dir=" custom-feeds-web-dir)
              ,(string-append "--custom-feeds-out-dir="
                              (make-pathname feeds-dir "custom"))
-             ,@(let ((yesterday-log (yesterday-log-path  publish-base-dir yesterday-dir)))
+             ,@(let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir)))
                  (if yesterday-log
                      (list
                       (string-append "--diff-against=" yesterday-log)
