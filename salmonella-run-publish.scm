@@ -119,19 +119,27 @@
         (pad n zeroes))))
 
 
-(define (! cmd #!optional dir)
+(define (! cmd #!optional dir publish-dir)
   (let ((cmd (string-intersperse (map ->string cmd)))
         (cwd (and dir (current-directory))))
     (when dir
       (change-directory dir)
       (debug "@" dir))
     (debug cmd)
-    (let* ((p (open-input-pipe (sprintf "~A 2>&1" cmd)))
-           (output (read-all p))
-           (exit-status (arithmetic-shift (close-input-pipe p) -8)))
-      (debug output)
-      (when dir (change-directory cwd))
-      (cons exit-status output))))
+    (let-values (((in out pid) (process (sprintf "~A 2>&1" cmd))))
+      (when (and publish-dir (hanging-process-killer-program))
+        (system (sprintf "~a ~a ~a &"
+                         (hanging-process-killer-program)
+                         pid
+                         (make-pathname publish-dir "hanging-processes.log"))))
+
+      (let ((output (read-all in)))
+	(let-values (((pid exit-normal? status) (process-wait pid)))
+          (close-input-port in)
+          (close-output-port out)
+          (debug output)
+          (when dir (change-directory cwd))
+          (cons status output))))))
 
 
 (define (build-chicken-core chicken-core-dir chicken-prefix)
@@ -167,7 +175,10 @@
        chicken-core-dir)
 
     ;; make check
-    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
+
+    ;;; XXX
+
+    #;(! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
                                          " CXX_COMPILER=" (c++-compiler)
                                          " PREFIX=" chicken-prefix
@@ -217,7 +228,9 @@
            " --repo-dir=" salmonella-repo-dir
            " --chicken-installation-prefix=" chicken-prefix
            " "
-           (string-intersperse (map symbol->string (list-eggs))))))))
+           (string-intersperse (map symbol->string (list-eggs)))))
+       "."
+       (tmp-dir))))
 
 
 (define yesterday-log-path
@@ -327,6 +340,7 @@
               (when (file-exists? file)
                 (! `(cp -R ,file ,publish-dir) (tmp-dir))))
             `(,(string-append (log-file) "z")
+              "hanging-processes.log"
               "yesterday-diff"
               "salmonella-report"
               "salmonella.log.bz2"))

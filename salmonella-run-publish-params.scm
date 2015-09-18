@@ -4,7 +4,7 @@
   local-mode? web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
-  run-salmonella?)
+  run-salmonella? hanging-process-killer-program)
 
 (import chicken scheme)
 (use posix files)
@@ -112,5 +112,8 @@
 
 (define run-salmonella?
   (make-parameter #t))
+
+(define hanging-process-killer-program
+  (make-parameter #f))
 
 ) ;; end module
