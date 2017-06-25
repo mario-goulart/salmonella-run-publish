@@ -4,7 +4,7 @@
   local-mode? web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
-  run-salmonella? hanging-process-killer-program)
+  run-salmonella? hanging-process-killer-program salmonella-path)
 
 (import chicken scheme)
 (use posix files)
@@ -114,6 +114,10 @@
   (make-parameter #t))
 
 (define hanging-process-killer-program
+  (make-parameter #f))
+
+(define salmonella-path
+  ;; Path to the salmonella binary.  #f means "use salmonella from $PATH".
   (make-parameter #f))
 
 ) ;; end module

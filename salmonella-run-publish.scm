@@ -54,17 +54,19 @@
         (if (null? paths)
             #f
             (let ((path (car paths)))
-              (or (file-exists? (make-pathname path program))
+              (or (file-exists? (if (absolute-pathname? path)
+				    path
+				    (make-pathname path program)))
                   (loop (cdr paths)))))))))
 
 
 (define (check-required-programs!)
   (let* ((required-programs
-          (append '("bzip2"
+          (append `("bzip2"
                     "dot"
                     "git"
                     "gzip"
-                    "salmonella"
+                    ,(or (salmonella-path) "salmonella")
                     "salmonella-diff"
                     "salmonella-feeds"
                     "salmonella-html-report"
@@ -217,7 +219,8 @@
     (! `(,(string-append
            "PATH="
            (make-pathname chicken-prefix "bin") ":$PATH"
-           " salmonella"
+           " "
+	   (or (salmonella-path) "salmonella")
            (if (null? skip-eggs)
                ""
                (string-append " --skip-eggs="
