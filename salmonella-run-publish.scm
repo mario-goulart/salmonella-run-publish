@@ -176,11 +176,7 @@
          spotless install)
        chicken-core-dir)
 
-    ;; make check
-
-    ;;; XXX
-
-    #;(! `(,(make-program) ,(string-append "PLATFORM=" make-platform
+    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
                                          " CXX_COMPILER=" (c++-compiler)
                                          " PREFIX=" chicken-prefix
