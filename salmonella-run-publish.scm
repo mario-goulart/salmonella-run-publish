@@ -159,6 +159,8 @@
           (! '(git checkout -f) chicken-core-dir))
         (! `(git clone -b ,(chicken-core-branch) ,(chicken-core-git-uri)) (tmp-dir)))
 
+    ((before-make-bootstrap-hook) chicken-core-dir)
+
     ;; make boot-chicken
     (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
                                          " C_COMPILER=" (c-compiler)
@@ -182,14 +184,9 @@
                                          " PREFIX=" chicken-prefix
                                          " CHICKEN=./chicken-boot")
          check)
-       chicken-core-dir)))
+       chicken-core-dir)
 
-
-(define (list-eggs)
-  (with-input-from-request
-   (sprintf "~a?release=~a&list=1" (henrietta-uri) (chicken-release))
-   #f
-   read-file))
+    ((after-make-check-hook) chicken-prefix)))
 
 
 (define (run-salmonella)
@@ -227,7 +224,7 @@
            " --repo-dir=" salmonella-repo-dir
            " --chicken-installation-prefix=" chicken-prefix
            " "
-           (string-intersperse (map symbol->string (list-eggs)))))
+           (string-intersperse (map symbol->string ((list-eggs))))))
        "."
        (tmp-dir))))
 

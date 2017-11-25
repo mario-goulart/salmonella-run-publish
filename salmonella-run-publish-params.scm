@@ -4,10 +4,18 @@
   local-mode? web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
-  run-salmonella? hanging-process-killer-program salmonella-path)
+  run-salmonella? hanging-process-killer-program salmonella-path
+  list-eggs
+
+  ;;; Hooks
+  after-make-check-hook
+  before-make-bootstrap-hook
+  )
 
 (import chicken scheme)
-(use posix files)
+(use extras posix files)
+(use http-client)
+
 
 ;;
 ;; User-configurable parameters
@@ -119,5 +127,25 @@
 (define salmonella-path
   ;; Path to the salmonella binary.  #f means "use salmonella from $PATH".
   (make-parameter #f))
+
+(define list-eggs
+  (make-parameter
+   (lambda ()
+     (with-input-from-request
+      (sprintf "~a?release=~a&list=1" (henrietta-uri) (chicken-release))
+      #f
+      read-file))))
+
+
+;;; Hooks
+(define before-make-bootstrap-hook
+  (make-parameter
+   (lambda (chicken-source-dir)
+     (void))))
+
+(define after-make-check-hook
+  (make-parameter
+   (lambda (chicken-installation-prefix)
+     (void))))
 
 ) ;; end module
