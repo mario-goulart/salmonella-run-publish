@@ -126,7 +126,7 @@
         (cwd (and dir (current-directory))))
     (when dir
       (change-directory dir)
-      (debug "@" dir))
+      (debug "@" (current-directory)))
     (debug cmd)
     (let-values (((in out pid) (process (sprintf "~A 2>&1" cmd))))
       (when (and publish-dir (hanging-process-killer-program))
