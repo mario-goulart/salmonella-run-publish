@@ -125,7 +125,8 @@
   (make-parameter #f))
 
 (define salmonella-path
-  ;; Path to the salmonella binary.  #f means "use salmonella from $PATH".
+  ;; Path to the salmonella binary.  #f means "use salmonella from
+  ;; chicken-bootstrap-prefix".
   (make-parameter #f))
 
 (define list-eggs
