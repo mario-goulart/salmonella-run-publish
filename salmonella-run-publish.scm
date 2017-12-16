@@ -67,8 +67,10 @@
                     "git"
                     "gzip"
                     ,(or (salmonella-path)
-                         (make-pathname (list (chicken-bootstrap-prefix) "bin")
-                                        "salmonella"))
+                         (if (chicken-bootstrap-prefix)
+                             (make-pathname (list (chicken-bootstrap-prefix) "bin")
+                                            "salmonella")
+                             "salmonella"))
                     "salmonella-diff"
                     "salmonella-feeds"
                     "salmonella-html-report"
