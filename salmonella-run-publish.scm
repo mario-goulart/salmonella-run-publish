@@ -145,6 +145,10 @@
           (close-output-port out)
           (debug output)
           (when dir (change-directory cwd))
+          (unless (zero? status)
+            (fprintf (current-error-port) "Error executing '~a'.  Exit code: ~a.\n"
+                     cmd status)
+            (exit status))
           (cons status output))))))
 
 
