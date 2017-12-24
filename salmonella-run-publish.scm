@@ -59,6 +59,23 @@
 				    (make-pathname path program)))
                   (loop (cdr paths)))))))))
 
+(define (program-path program)
+  ;; Select programs in the following order of preference:
+  ;; 1. (chicken-bootstrap-prefix)
+  ;; 2. this program's prefix
+  ;; 3. $PATH
+  (call/cc
+   (lambda (return)
+     (when (chicken-bootstrap-prefix)
+       (let ((path (make-pathname (list (chicken-bootstrap-prefix) "bin")
+                                  program)))
+           (when (file-exists? path)
+             (return path))))
+     (let* ((this-prefix (pathname-directory (pathname-directory (chicken-home))))
+            (path (make-pathname (list this-prefix "bin") program)))
+       (when (file-exists? path)
+         (return path)))
+     (return program))))
 
 (define (check-required-programs!)
   (let* ((required-programs
@@ -66,18 +83,14 @@
                     "dot"
                     "git"
                     "gzip"
-                    ,(or (salmonella-path)
-                         (if (chicken-bootstrap-prefix)
-                             (make-pathname (list (chicken-bootstrap-prefix) "bin")
-                                            "salmonella")
-                             "salmonella"))
-                    "salmonella-diff"
-                    "salmonella-feeds"
-                    "salmonella-html-report"
+                    ,(or (salmonella-path) (program-path "salmonella"))
+                    ,(program-path "salmonella-diff")
+                    ,(program-path "salmonella-feeds")
+                    ,(program-path "salmonella-html-report")
                     "svn"
                     "tar")
                   (if (local-mode?)
-                      '("henrietta-cache")
+                      `(,(program-path "henrietta-cache"))
                       '())
                   (if (chicken-bootstrap-prefix)
                       '()
@@ -221,7 +234,7 @@
            "PATH="
            (make-pathname chicken-prefix "bin") ":$PATH"
            " "
-	   (or (salmonella-path) "salmonella")
+	   (or (salmonella-path) (program-path "salmonella"))
            (if (null? skip-eggs)
                ""
                (string-append " --skip-eggs="
@@ -260,20 +273,21 @@
   (let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir))
         (today-log (make-pathname (tmp-dir) "salmonella.log")))
     (when yesterday-log
-      (! `(salmonella-diff --out-dir=yesterday-diff
-                           --label1=Yesterday
-                           --label2=Today
-                           ,(if (salmonella-diff-link-mode?)
-                                (string-append "--report-uri1="
-                                               (make-pathname yesterday-web-dir
-                                                              "salmonella-report")
-                                               " "
-                                               "--report-uri2="
-                                               (make-pathname publish-web-dir
-                                                              "salmonella-report"))
-                                "")
-                           ,yesterday-log
-                           ,today-log)
+      (! `(,(program-path "salmonella-diff")
+           --out-dir=yesterday-diff
+           --label1=Yesterday
+           --label2=Today
+           ,(if (salmonella-diff-link-mode?)
+                (string-append "--report-uri1="
+                               (make-pathname yesterday-web-dir
+                                              "salmonella-report")
+                               " "
+                               "--report-uri2="
+                               (make-pathname publish-web-dir
+                                              "salmonella-report"))
+                "")
+           ,yesterday-log
+           ,today-log)
          (tmp-dir)))))
 
 
@@ -293,7 +307,7 @@
       (let ((custom-feeds-web-dir
              (make-absolute-pathname feeds-web-dir "custom")))
         ;; Generate the atom feeds
-        (! `(salmonella-feeds
+        (! `(,(program-path "salmonella-feeds")
              --log-file=salmonella.log
              ,(string-append "--feeds-server=http://" (feeds-server))
              ,(string-append "--feeds-web-dir=" feeds-web-dir)
@@ -329,7 +343,8 @@
       (let ((compressed (if (compress-report?)
                             `(--compress-html --compress-graphics)
                             '())))
-        (! `(salmonella-html-report ,@compressed salmonella.log salmonella-report)
+        (! `(,(program-path "salmonella-html-report")
+             ,@compressed salmonella.log salmonella-report)
            (tmp-dir)))
 
       ;; Generate diff against yesterday's log (if it exists)
