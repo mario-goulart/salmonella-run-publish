@@ -5,7 +5,7 @@
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
   run-salmonella? hanging-process-killer-program salmonella-path
-  list-eggs
+  list-eggs pre-built-chicken
 
   ;;; Hooks
   after-make-check-hook
@@ -138,6 +138,17 @@
       #f
       read-file))))
 
+(define pre-built-chicken
+  ;; Path to the installation prefix of a pre-built CHICKEN.  If this
+  ;; parameter is not #f, salmonella-run-publish will use the CHICKEN
+  ;; installation pointed by the value of this parameter instead of
+  ;; building CHICKEN from git.  CHICKEN build-related hooks will be
+  ;; just executed in order, without any intermediate steps between
+  ;; them.
+  ;;
+  ;; This parameter is mostly useful to speed-up tests of salmonella
+  ;; and/or salmonella-run-publish itself.
+  (make-parameter #f))
 
 ;;; Hooks
 (define before-make-bootstrap-hook

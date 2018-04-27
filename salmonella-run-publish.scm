@@ -192,59 +192,67 @@
 
 
 (define (build-chicken-core chicken-core-dir chicken-prefix)
-  (let ((chicken-bootstrap
-         (if (chicken-bootstrap-prefix)
-             (make-pathname (list (chicken-bootstrap-prefix) "bin") "chicken")
-             "chicken")))
-
-    ;; Get the most recent version of the chicken-core
-    (if (file-exists? chicken-core-dir)
-        (begin
-          (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
-          (! "git" '(pull) dir: chicken-core-dir)
-          (! "git" '(clean -f) dir: chicken-core-dir)
-          (! "git" '(checkout -f) dir: chicken-core-dir))
-        (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
-           dir: (tmp-dir)))
-
+  (cond
+   ((pre-built-chicken)
+    ;; When a pre-built CHICKEN is provided, just run hooks in order
     ((before-make-bootstrap-hook) chicken-core-dir)
+    ((after-make-check-hook) chicken-prefix))
+   (else
+    (let ((chicken-bootstrap
+           (if (chicken-bootstrap-prefix)
+               (make-pathname (list (chicken-bootstrap-prefix) "bin") "chicken")
+               "chicken")))
 
-    ;; make boot-chicken
-    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                        ,(string-append "C_COMPILER=" (c-compiler))
-                        ,(string-append "CXX_COMPILER=" (c++-compiler))
-                        ,(string-append "CHICKEN=" chicken-bootstrap)
-                        spotless clean confclean boot-chicken)
-       dir: chicken-core-dir)
+      ;; Get the most recent version of the chicken-core
+      (if (file-exists? chicken-core-dir)
+          (begin
+            (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
+            (! "git" '(pull) dir: chicken-core-dir)
+            (! "git" '(clean -f) dir: chicken-core-dir)
+            (! "git" '(checkout -f) dir: chicken-core-dir))
+          (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
+             dir: (tmp-dir)))
 
-    ;; make install
-    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                        ,(string-append "C_COMPILER=" (c-compiler))
-                        ,(string-append "CXX_COMPILER=" (c++-compiler))
-                        ,(string-append "PREFIX=" chicken-prefix)
-                        "CHICKEN=./chicken-boot"
-                        spotless install)
-       dir: chicken-core-dir)
+      ((before-make-bootstrap-hook) chicken-core-dir)
 
-    ;; make check
-    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                        ,(string-append "C_COMPILER=" (c-compiler))
-                        ,(string-append "CXX_COMPILER=" (c++-compiler))
-                        ,(string-append "PREFIX=" chicken-prefix)
-                        ,(string-append "CHICKEN=./chicken-boot")
-                        check)
-       dir: chicken-core-dir)
+      ;; make boot-chicken
+      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                          ,(string-append "C_COMPILER=" (c-compiler))
+                          ,(string-append "CXX_COMPILER=" (c++-compiler))
+                          ,(string-append "CHICKEN=" chicken-bootstrap)
+                          spotless clean confclean boot-chicken)
+         dir: chicken-core-dir)
 
-    ((after-make-check-hook) chicken-prefix)))
+      ;; make install
+      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                          ,(string-append "C_COMPILER=" (c-compiler))
+                          ,(string-append "CXX_COMPILER=" (c++-compiler))
+                          ,(string-append "PREFIX=" chicken-prefix)
+                          "CHICKEN=./chicken-boot"
+                          spotless install)
+         dir: chicken-core-dir)
+
+      ;; make check
+      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                          ,(string-append "C_COMPILER=" (c-compiler))
+                          ,(string-append "CXX_COMPILER=" (c++-compiler))
+                          ,(string-append "PREFIX=" chicken-prefix)
+                          ,(string-append "CHICKEN=./chicken-boot")
+                          check)
+         dir: chicken-core-dir)
+
+      ((after-make-check-hook) chicken-prefix)))))
 
 
 (define (run-salmonella)
   (let ((salmonella-repo-dir (make-pathname (tmp-dir) "salmonella-repo"))
         (chicken-core-dir (make-pathname (tmp-dir) "chicken-core"))
-        (chicken-prefix (make-pathname (tmp-dir) "chicken")))
+        (chicken-prefix (or (pre-built-chicken)
+                            (make-pathname (tmp-dir) "chicken"))))
     ;; Remove previous run data
     (for-each (lambda (file)
-                (! "rm" `(-rf ,file) dir: (tmp-dir)))
+                (unless (equal? file (pre-built-chicken))
+                  (! "rm" `(-rf ,file) dir: (tmp-dir))))
               `(,chicken-prefix
                 salmonella.log
                 salmonella.log.bz2
