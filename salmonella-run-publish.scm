@@ -172,10 +172,14 @@
     (let-values (((in out pid)
 		  (process (find-program cmd) args (reuse-environment env))))
       (when (and publish-dir (hanging-process-killer-program))
-        (system (sprintf "~a ~a ~a &"
-                         (hanging-process-killer-program)
-                         pid
-                         (make-pathname publish-dir "hanging-processes.log"))))
+        (system
+         (sprintf "~a ~a &"
+                  (hanging-process-killer-program)
+                  (string-intersperse
+                   (map ->string
+                        ((hanging-process-killer-program-args)
+                         pid (make-pathname publish-dir
+                                            "hanging-processes.log")))))))
       (let ((output (read-all in)))
 	(let-values (((pid exit-normal? status) (process-wait pid)))
           (close-input-port in)
