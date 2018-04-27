@@ -47,17 +47,26 @@
           "bsd"
           software-platform)))
 
-(define program-available?
-  (let ((paths (string-split (get-environment-variable "PATH") ":"))) ;; no windows support
+(define find-program
+  (let ((cache '())
+        ;; no windows support
+	(paths (string-split (get-environment-variable "PATH") ":")))
     (lambda (program)
-      (let loop ((paths paths))
-        (if (null? paths)
-            #f
-            (let ((path (car paths)))
-              (or (file-exists? (if (absolute-pathname? path)
-				    path
-				    (make-pathname path program)))
-                  (loop (cdr paths)))))))))
+      (if (absolute-pathname? program)
+          (and (file-execute-access? program)
+               program)
+          (or (and-let* ((path (alist-ref program cache equal?)))
+                path)
+              (let loop ((paths paths))
+                (if (null? paths)
+                    #f
+                    (let* ((path (car paths))
+                           (program-path (make-pathname path program)))
+                      (cond ((file-execute-access? program-path)
+                             (set! cache (cons (cons program program-path)
+                                               cache))
+                             program-path)
+                            (else (loop (cdr paths))))))))))))
 
 (define (program-path program)
   ;; Select programs in the following order of preference:
@@ -96,7 +105,7 @@
                       '()
                       '("csi"
                         "chicken"))))
-         (missing-programs (remove program-available? required-programs)))
+         (missing-programs (remove find-program required-programs)))
     (when (chicken-bootstrap-prefix)
       (unless (and (file-exists?
                     (make-pathname (list (chicken-bootstrap-prefix) "bin") "csi"))
@@ -137,26 +146,37 @@
         (number->string n)
         (pad n zeroes))))
 
+(define (reuse-environment vars/vals)
+  ;; vars/vals is an alist mapping environment variable names to their
+  ;; values.  The bindings get appended to the current environment
+  ;; variables/values and converted to a format suitable for
+  ;; `process''s ENVIRONMENT-LIST.
+  (map (lambda (var/val)
+         (conc (car var/val) "=" (cdr var/val)))
+       (append (get-environment-variables)
+               vars/vals)))
 
-(define (! cmd #!optional dir publish-dir)
-  (let ((cmd (string-intersperse (map ->string cmd)))
+(define (! cmd args #!key dir publish-dir (env '()) output-file)
+  (let ((args (map ->string args))
         (cwd (and dir (current-directory))))
     (when dir
       (change-directory dir)
       (debug "@" (current-directory)))
-    (debug cmd)
-    (let-values (((in out pid) (process (sprintf "~A 2>&1" cmd))))
+    (debug (string-intersperse (cons cmd args)))
+    (let-values (((in out pid)
+		  (process (find-program cmd) args (reuse-environment env))))
       (when (and publish-dir (hanging-process-killer-program))
         (system (sprintf "~a ~a ~a &"
                          (hanging-process-killer-program)
                          pid
                          (make-pathname publish-dir "hanging-processes.log"))))
-
       (let ((output (read-all in)))
 	(let-values (((pid exit-normal? status) (process-wait pid)))
           (close-input-port in)
           (close-output-port out)
           (debug output)
+          (when output-file
+            (with-output-to-file output-file (cut display output)))
           (when dir (change-directory cwd))
           (unless (zero? status)
             (fprintf (current-error-port) "Error executing '~a'.  Exit code: ~a.\n"
@@ -174,38 +194,40 @@
     ;; Get the most recent version of the chicken-core
     (if (file-exists? chicken-core-dir)
         (begin
-          (! `(git checkout ,(chicken-core-branch)) chicken-core-dir)
-          (! '(git pull) chicken-core-dir)
-          (! '(git clean -f) chicken-core-dir)
-          (! '(git checkout -f) chicken-core-dir))
-        (! `(git clone -b ,(chicken-core-branch) ,(chicken-core-git-uri)) (tmp-dir)))
+          (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
+          (! "git" '(pull) dir: chicken-core-dir)
+          (! "git" '(clean -f) dir: chicken-core-dir)
+          (! "git" '(checkout -f) dir: chicken-core-dir))
+        (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
+           dir: (tmp-dir)))
 
     ((before-make-bootstrap-hook) chicken-core-dir)
 
     ;; make boot-chicken
-    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
-                                         " C_COMPILER=" (c-compiler)
-                                         " CXX_COMPILER=" (c++-compiler)
-                                         " CHICKEN=" chicken-bootstrap)
-         spotless clean confclean boot-chicken)
-       chicken-core-dir)
+    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                        ,(string-append "C_COMPILER=" (c-compiler))
+                        ,(string-append "CXX_COMPILER=" (c++-compiler))
+                        ,(string-append "CHICKEN=" chicken-bootstrap)
+                        spotless clean confclean boot-chicken)
+       dir: chicken-core-dir)
 
     ;; make install
-    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
-                                         " C_COMPILER=" (c-compiler)
-                                         " CXX_COMPILER=" (c++-compiler)
-                                         " PREFIX=" chicken-prefix
-                                         " CHICKEN=./chicken-boot")
-         spotless install)
-       chicken-core-dir)
+    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                        ,(string-append "C_COMPILER=" (c-compiler))
+                        ,(string-append "CXX_COMPILER=" (c++-compiler))
+                        ,(string-append "PREFIX=" chicken-prefix)
+                        "CHICKEN=./chicken-boot"
+                        spotless install)
+       dir: chicken-core-dir)
 
-    (! `(,(make-program) ,(string-append "PLATFORM=" make-platform
-                                         " C_COMPILER=" (c-compiler)
-                                         " CXX_COMPILER=" (c++-compiler)
-                                         " PREFIX=" chicken-prefix
-                                         " CHICKEN=./chicken-boot")
-         check)
-       chicken-core-dir)
+    ;; make check
+    (! (make-program) `(,(string-append "PLATFORM=" make-platform)
+                        ,(string-append "C_COMPILER=" (c-compiler))
+                        ,(string-append "CXX_COMPILER=" (c++-compiler))
+                        ,(string-append "PREFIX=" chicken-prefix)
+                        ,(string-append "CHICKEN=./chicken-boot")
+                        check)
+       dir: chicken-core-dir)
 
     ((after-make-check-hook) chicken-prefix)))
 
@@ -216,7 +238,7 @@
         (chicken-prefix (make-pathname (tmp-dir) "chicken")))
     ;; Remove previous run data
     (for-each (lambda (file)
-                (! `(rm -rf ,file) (tmp-dir)))
+                (! "rm" `(-rf ,file) dir: (tmp-dir)))
               `(,chicken-prefix
                 salmonella.log
                 salmonella.log.bz2
@@ -229,26 +251,30 @@
     (build-chicken-core chicken-core-dir chicken-prefix)
 
     ;; Run salmonella
-    (! `(rm -rf ,salmonella-repo-dir))
-    (! `(,(string-append
-           "PATH="
-           (make-pathname chicken-prefix "bin") ":$PATH"
-           " "
-	   (or (salmonella-path) (program-path "salmonella"))
-           (if (null? skip-eggs)
-               ""
-               (string-append " --skip-eggs="
-                              (string-intersperse (map ->string (skip-eggs)) ",")))
-           (if (keep-repo?)
-               " --keep-repo"
-               " --clear-chicken-home")
-           " --repo-dir=" salmonella-repo-dir
-           " --chicken-installation-prefix=" chicken-prefix
-           " "
-           (string-intersperse (map symbol->string ((list-eggs))))))
-       "."
-       (tmp-dir))))
-
+    (! "rm" `(-rf ,salmonella-repo-dir))
+    (let ((env `(("PATH" . ,(sprintf "~a:~a"
+                                     (make-pathname chicken-prefix "bin")
+                                     (get-environment-variable "PATH")))))
+          (args
+           (append
+            (if (null? (skip-eggs))
+                '()
+                (list
+                 (string-append "--skip-eggs="
+                                (string-intersperse
+                                 (map ->string (skip-eggs))
+                                 ","))))
+            (list
+             (if (keep-repo?)
+                 "--keep-repo"
+                 "--clear-chicken-home")
+             (string-append "--repo-dir=" salmonella-repo-dir)
+             (string-append "--chicken-installation-prefix=" chicken-prefix))
+            (map symbol->string ((list-eggs))))))
+      (! (or (salmonella-path) "salmonella") args
+         env: env
+         dir: "."
+         publish-dir: (tmp-dir)))))
 
 (define yesterday-log-path
   ;; Return the path to the yesterday's log file if it exists; or #f
@@ -262,8 +288,9 @@
                  (make-pathname (list publish-base-dir yesterday-dir)
                                 "salmonella.log.bz2")))
             (cond ((file-exists? yesterday-clog)
-                   (! `(bzip2 -d -c ,yesterday-clog > yesterday.log)
-                      (tmp-dir))
+                   (! "bzip2" `(-d -c ,yesterday-clog)
+                      output-file: "yesterday.log"
+                      dir: (tmp-dir))
                    (set! log-path (make-pathname (tmp-dir) "yesterday.log")))
                   (else (set! log-path #f))))
           log-path))))
@@ -273,42 +300,42 @@
   (let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir))
         (today-log (make-pathname (tmp-dir) "salmonella.log")))
     (when yesterday-log
-      (! `(,(program-path "salmonella-diff")
-           --out-dir=yesterday-diff
-           --label1=Yesterday
-           --label2=Today
-           ,(if (salmonella-diff-link-mode?)
-                (string-append "--report-uri1="
-                               (make-pathname yesterday-web-dir
-                                              "salmonella-report")
-                               " "
-                               "--report-uri2="
-                               (make-pathname publish-web-dir
-                                              "salmonella-report"))
-                "")
-           ,yesterday-log
-           ,today-log)
-         (tmp-dir)))))
-
+      (! "salmonella-diff"
+	 (append
+	  `(--out-dir=yesterday-diff
+	    --label1=Yesterday
+	    --label2=Today)
+	  (if (salmonella-diff-link-mode?)
+	      (list
+	       (string-append "--report-uri1="
+			      (make-pathname yesterday-web-dir
+					     "salmonella-report"))
+	       (string-append "--report-uri2="
+			      (make-pathname publish-web-dir
+					     "salmonella-report")))
+	      '())
+	  (list yesterday-log
+		today-log))
+         dir: (tmp-dir)))))
 
 (define (process-results publish-base-dir publish-web-dir today-dir
                          yesterday-dir yesterday-web-dir feeds-dir
                          feeds-web-dir)
   (let ((custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
-
     (create-directory feeds-dir 'with-parents)
-
-    (! `(svn co --username=anonymous --password=
-             https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds
-             custom-feeds)
-       (tmp-dir))
+    (! "svn" '(co
+               --username=anonymous
+               --password=
+               "https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds"
+               custom-feeds)
+       dir: (tmp-dir))
 
     (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
       (let ((custom-feeds-web-dir
              (make-absolute-pathname feeds-web-dir "custom")))
         ;; Generate the atom feeds
-        (! `(,(program-path "salmonella-feeds")
-             --log-file=salmonella.log
+        (! (program-path "salmonella-feeds")
+           `(--log-file=salmonella.log
              ,(string-append "--feeds-server=http://" (feeds-server))
              ,(string-append "--feeds-web-dir=" feeds-web-dir)
              ,(string-append "--salmonella-report-uri=http://"
@@ -337,15 +364,15 @@
                       (sprintf "--diff-label1='yesterday (~a)'" yesterday-dir)
                       (sprintf "--diff-label2='today (~a)'" today-dir))
                      '())))
-           (tmp-dir)))
+           dir: (tmp-dir)))
 
       ;; Generate the HTML report
       (let ((compressed (if (compress-report?)
                             `(--compress-html --compress-graphics)
                             '())))
-        (! `(,(program-path "salmonella-html-report")
-             ,@compressed salmonella.log salmonella-report)
-           (tmp-dir)))
+        (! (program-path "salmonella-html-report")
+           `(,@compressed salmonella.log salmonella-report)
+           dir: (tmp-dir)))
 
       ;; Generate diff against yesterday's log (if it exists)
       (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir))))
@@ -353,34 +380,37 @@
 
 (define (publish-results publish-dir)
   (create-directory publish-dir 'with-parents)
-  (! `(bzip2 -9 salmonella.log) (tmp-dir))
-  (! `(gzip -9 -f -S z ,(log-file)) (tmp-dir))
+  (! "bzip2" `(-9 salmonella.log) dir: (tmp-dir))
+  (! "gzip" `(-9 -f -S z ,(log-file)) dir: (tmp-dir))
   (for-each (lambda (file)
               (when (file-exists? file)
-                (! `(cp -R ,file ,publish-dir) (tmp-dir))))
+                (! "cp" `(-R ,file ,publish-dir) dir: (tmp-dir))))
             `(,(string-append (log-file) "z")
               "hanging-processes.log"
               "yesterday-diff"
               "salmonella-report"
               "salmonella.log.bz2"))
   (when (create-report-tarball)
-    (! (append
-        (case (create-report-tarball)
-          ((gzip) '(GZIP=-9))
-          ((bzip2) '(BZIP2=-9))
-          (else '()))
-        `(tar ,(case (create-report-tarball)
-                 ((gzip) 'czf)
-                 ((bzip2) 'cjf)
-                 (else 'cf))
-              ,(string-append "salmonella-report.tar"
-                              (case (create-report-tarball)
-                                ((gzip) ".gz")
-                                ((bzip2) ".bz2")
-                                (else "")))
-              "salmonella-report"))
-       publish-dir)
-    (! `(rm -rf "salmonella-report") publish-dir)))
+    (let ((env
+           (case (create-report-tarball)
+             ((gzip) '(("GZIP" . "-9")))
+             ((bzip2) '(("BZIP2" . "9")))
+             (else '())))
+          (tar-args
+           (case (create-report-tarball)
+             ((gzip) 'czf)
+             ((bzip2) 'cjf)
+             (else 'cf))))
+      (! "tar" `(,tar-args
+                 ,(string-append "salmonella-report.tar"
+                                 (case (create-report-tarball)
+                                   ((gzip) ".gz")
+                                   ((bzip2) ".bz2")
+                                   (else "")))
+                 "salmonella-report")
+         env: env
+         dir: publish-dir))
+    (! "rm" `(-rf "salmonella-report") dir: publish-dir)))
 
 
 (define (usage #!optional exit-code)
