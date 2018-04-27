@@ -23,6 +23,8 @@
 ;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
 ;; - tar
 ;; - gzip
+;; - If hanging-process-killer-program is set, salmonella-run-publish
+;;   will check if it is available.
 
 ;; TODO
 ;; - loop reading commands output port instead of read-all
@@ -104,7 +106,11 @@
                   (if (chicken-bootstrap-prefix)
                       '()
                       '("csi"
-                        "chicken"))))
+                        "chicken"))
+                  (if (hanging-process-killer-program)
+                      (list (hanging-process-killer-program))
+                      '())
+                  ))
          (missing-programs (remove find-program required-programs)))
     (when (chicken-bootstrap-prefix)
       (unless (and (file-exists?
