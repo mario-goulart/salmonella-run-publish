@@ -328,7 +328,7 @@
   (let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir))
         (today-log (make-pathname (tmp-dir) "salmonella.log")))
     (when yesterday-log
-      (! "salmonella-diff"
+      (! (program-path "salmonella-diff")
 	 (append
 	  `(--out-dir=yesterday-diff
 	    --label1=Yesterday
