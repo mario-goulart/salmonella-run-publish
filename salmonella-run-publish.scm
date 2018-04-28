@@ -289,7 +289,7 @@
              (string-append "--repo-dir=" salmonella-repo-dir)
              (string-append "--chicken-installation-prefix=" chicken-prefix))
             (map symbol->string ((list-eggs))))))
-      (! (or (salmonella-path) "salmonella") args
+      (! (or (salmonella-path) (program-path "salmonella")) args
          env: env
          dir: "."
          publish-dir: (tmp-dir)))))
