@@ -108,7 +108,7 @@
                       '("csi"
                         "chicken"))
                   (if (hanging-process-killer-program)
-                      (list (hanging-process-killer-program))
+                      `(,(program-path (hanging-process-killer-program)))
                       '())
                   ))
          (missing-programs (remove find-program required-programs)))
