@@ -174,7 +174,7 @@
       (when (and publish-dir (hanging-process-killer-program))
         (system
          (sprintf "~a ~a &"
-                  (hanging-process-killer-program)
+                  (program-path (hanging-process-killer-program))
                   (string-intersperse
                    (map ->string
                         ((hanging-process-killer-program-args)
