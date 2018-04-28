@@ -304,11 +304,14 @@
       (if (eq? log-path 'not-set)
           (let ((yesterday-clog
                  (make-pathname (list publish-base-dir yesterday-dir)
-                                "salmonella.log.bz2")))
+                                "salmonella.log.bz2"))
+                (yesterday-clog-tmp
+                 (make-pathname (tmp-dir) "yesterday.log.bz2")))
             (cond ((file-exists? yesterday-clog)
-                   (! "bzip2" `(-d -c ,yesterday-clog)
-                      output-file: "yesterday.log"
-                      dir: (tmp-dir))
+                   (file-copy yesterday-clog
+                              yesterday-clog-tmp
+                              'clobber)
+                   (! "bzip2" `(-d ,yesterday-clog-tmp) dir: (tmp-dir))
                    (set! log-path (make-pathname (tmp-dir) "yesterday.log")))
                   (else (set! log-path #f))))
           log-path))))
