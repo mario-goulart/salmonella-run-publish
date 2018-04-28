@@ -52,16 +52,23 @@
 (define find-program
   (let ((cache '())
         ;; no windows support
-	(paths (string-split (get-environment-variable "PATH") ":")))
+        (paths (string-split (get-environment-variable "PATH") ":"))
+        (not-found
+         (lambda (program)
+           (with-output-to-port (current-error-port)
+             (lambda ()
+               (printf "find-program: error: ~a not found.\n" program)))
+           #f)))
     (lambda (program)
       (if (absolute-pathname? program)
-          (and (file-execute-access? program)
-               program)
+          (if (file-execute-access? program)
+              program
+              (not-found program))
           (or (and-let* ((path (alist-ref program cache equal?)))
                 path)
               (let loop ((paths paths))
                 (if (null? paths)
-                    #f
+                    (not-found program)
                     (let* ((path (car paths))
                            (program-path (make-pathname path program)))
                       (cond ((file-execute-access? program-path)
