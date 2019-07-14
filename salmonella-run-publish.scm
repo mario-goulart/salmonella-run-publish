@@ -95,13 +95,29 @@
          (return path)))
      (return program))))
 
+(define salmonella-program
+  (let ((prog #f))
+    (lambda ()
+      (unless prog
+        (set! prog
+              (if (salmonella-path)
+                  (if (instances)
+                      (make-pathname (pathname-directory (salmonella-path))
+                                     "salmonella-epidemy")
+                      (salmonella-path))
+                  (program-path
+                   (if (instances)
+                       "salmonella-epidemy"
+                       "salmonella")))))
+      prog)))
+
 (define (check-required-programs!)
   (let* ((required-programs
           (append `("bzip2"
                     "dot"
                     "git"
                     "gzip"
-                    ,(or (salmonella-path) (program-path "salmonella"))
+                    ,(salmonella-program)
                     ,(program-path "salmonella-diff")
                     ,(program-path "salmonella-feeds")
                     ,(program-path "salmonella-html-report")
@@ -282,6 +298,9 @@
                                      (get-environment-variable "PATH")))))
           (args
            (append
+            (if (instances)
+                (list (conc "--instances=" (instances)))
+                '())
             (if (null? (skip-eggs))
                 '()
                 (list
@@ -293,10 +312,11 @@
              (if (keep-repo?)
                  "--keep-repo"
                  "--clear-chicken-home")
+             "--log-file=salmonella.log"
              (string-append "--repo-dir=" salmonella-repo-dir)
              (string-append "--chicken-installation-prefix=" chicken-prefix))
             (map symbol->string ((list-eggs))))))
-      (! (or (salmonella-path) (program-path "salmonella")) args
+      (! (salmonella-program) args
          env: env
          dir: "."
          publish-dir: (tmp-dir)))))

@@ -6,7 +6,7 @@
   create-report-tarball salmonella-diff-link-mode? chicken-release
   run-salmonella? hanging-process-killer-program
   hanging-process-killer-program-args salmonella-path
-  list-eggs pre-built-chicken
+  list-eggs pre-built-chicken instances
 
   ;;; Hooks
   after-make-check-hook
@@ -45,6 +45,12 @@
    (if (eq? (software-version) 'linux)
        "make"
        "gmake")))
+
+(define instances
+  ;; If bound to an integer, use salmonella-epidemy instead of
+  ;; salmonella.  The integer number represents the number of
+  ;; salmonella instances to run.
+  (make-parameter #f))
 
 (define keep-repo?
   ;; salmonella's --keep-repo option
