@@ -293,10 +293,7 @@
 
     ;; Run salmonella
     (! "rm" `(-rf ,salmonella-repo-dir))
-    (let ((env `(("PATH" . ,(sprintf "~a:~a"
-                                     (make-pathname chicken-prefix "bin")
-                                     (get-environment-variable "PATH")))))
-          (args
+    (let ((args
            (append
             (if (instances)
                 (list (conc "--instances=" (instances)))
@@ -317,7 +314,6 @@
              (string-append "--chicken-installation-prefix=" chicken-prefix))
             (map symbol->string ((list-eggs))))))
       (! (salmonella-program) args
-         env: env
          dir: "."
          publish-dir: (tmp-dir)))))
 
