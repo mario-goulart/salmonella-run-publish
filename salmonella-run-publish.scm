@@ -460,9 +460,13 @@
 
 
 (define (usage #!optional exit-code)
-  (print "Usage: " (pathname-strip-directory (program-name)) " <config file> ...")
-  (when exit-code
-    (exit exit-code)))
+  (let ((port (if (and exit-code (not (zero? exit-code)))
+                  (current-error-port)
+                  (current-output-port))))
+    (fprintf port "Usage: ~a <config file> ...\n"
+             (pathname-strip-directory (program-name)))
+    (when exit-code
+      (exit exit-code))))
 
 
 (define (die . msg)
