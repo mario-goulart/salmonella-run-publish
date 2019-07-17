@@ -185,7 +185,7 @@
        (append (get-environment-variables)
                vars/vals)))
 
-(define (! cmd args #!key dir publish-dir (env '()) output-file)
+(define (! cmd args #!key dir publish-dir (env '()) output-file (abort-on-non-zero? #t))
   (let ((args (map ->string args))
         (cwd (and dir (current-directory))))
     (when dir
@@ -214,7 +214,8 @@
           (unless (zero? status)
             (fprintf (current-error-port) "Error executing '~a'.  Exit code: ~a.\n"
                      cmd status)
-            (exit status))
+            (when abort-on-non-zero?
+              (exit status)))
           (cons status output))))))
 
 
@@ -315,6 +316,7 @@
             (map symbol->string ((list-eggs))))))
       (! (salmonella-program) args
          dir: "."
+         abort-on-non-zero?: #f
          publish-dir: (tmp-dir)))))
 
 (define yesterday-log-path
