@@ -460,7 +460,7 @@
 
 
 (define (usage #!optional exit-code)
-  (print "Usage: " (pathname-strip-directory (program-name)) " <config file>")
+  (print "Usage: " (pathname-strip-directory (program-name)) " <config file> ...")
   (when exit-code
     (exit exit-code)))
 
@@ -484,7 +484,7 @@
 
   ;; Load config file if provided
   (unless (null? args)
-    (load (car args)))
+    (for-each load args))
 
   (check-required-programs!)
 
