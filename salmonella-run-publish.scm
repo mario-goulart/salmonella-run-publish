@@ -426,12 +426,20 @@
 
 
 (define (publish-results publish-dir)
+  ;; When calling ! here, use abort-on-non-zero?: #f, so that logs get
+  ;; published even when something fails.
   (create-directory publish-dir 'with-parents)
-  (! "bzip2" `(-9 salmonella.log) dir: (tmp-dir))
-  (! "gzip" `(-9 -f -S z ,(log-file)) dir: (tmp-dir))
+  (! "bzip2" `(-9 salmonella.log)
+     abort-on-non-zero?: #f
+     dir: (tmp-dir))
+  (! "gzip" `(-9 -f -S z ,(log-file))
+     abort-on-non-zero?: #f
+     dir: (tmp-dir))
   (for-each (lambda (file)
               (when (file-exists? file)
-                (! "cp" `(-R ,file ,publish-dir) dir: (tmp-dir))))
+                (! "cp" `(-R ,file ,publish-dir)
+                   dir: (tmp-dir)
+                   abort-on-non-zero?: #f)))
             `(,(string-append (log-file) "z")
               "hanging-processes.log"
               "yesterday-diff"
@@ -456,8 +464,11 @@
                                    (else "")))
                  "salmonella-report")
          env: env
-         dir: publish-dir))
-    (! "rm" `(-rf "salmonella-report") dir: publish-dir)))
+         dir: publish-dir
+         abort-on-non-zero?: #f))
+    (! "rm" `(-rf "salmonella-report")
+       abort-on-non-zero?: #f
+       dir: publish-dir)))
 
 
 (define (usage #!optional exit-code)
