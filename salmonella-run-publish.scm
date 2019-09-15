@@ -215,7 +215,8 @@
             (fprintf (current-error-port) "Error executing '~a'.  Exit code: ~a.\n"
                      cmd status)
             (when abort-on-non-zero?
-              (exit status)))
+              (error '! (sprintf "Command '~a ~a' exited ~a."
+                                 cmd args status))))
           (cons status output))))))
 
 
