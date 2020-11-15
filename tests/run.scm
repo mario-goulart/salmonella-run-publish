@@ -1,6 +1,17 @@
-(use files posix utils)
-(use salmonella-run-publish-params)
-(use http-client simple-sha1 test)
+(import scheme)
+(cond-expand
+  (chicken-4
+   (import chicken)
+   (use files posix utils)
+   (use salmonella-run-publish-params)
+   (use http-client simple-sha1 test))
+  (chicken-5
+   (import (chicken base))
+   (import salmonella-run-publish-params)
+   (import http-client simple-sha1 test))
+  (else
+   (error "Unsupported CHICKEN version.")))
+
 
 (load "test.conf")
 

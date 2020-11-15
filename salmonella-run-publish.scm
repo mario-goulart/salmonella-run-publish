@@ -27,17 +27,40 @@
 ;;   will check if it is available.
 
 ;; TODO
-;; - loop reading commands output port instead of read-all
+;; - loop reading commands output port instead of read-string
 ;; - substitute system `rm' by some scheme code
 ;; - local-mode
 ;; - notify vandusen
 
 (module salmonella-run-publish-app ()
 
-(import chicken scheme)
-(use posix utils srfi-1 srfi-13 irregex data-structures ports files extras)
-(use http-client salmonella-run-publish-params)
-(declare (uses chicken-syntax))
+(import scheme)
+(cond-expand
+  (chicken-4
+   (import chicken)
+   (use posix utils srfi-1 srfi-13 irregex data-structures ports files extras)
+   (use http-client salmonella-run-publish-params)
+   (declare (uses chicken-syntax))
+   (define file-copy copy-file)
+   (define file-executable? file-execute-access?))
+  (chicken-5
+   (import (chicken base)
+           (chicken condition)
+           (chicken file)
+           (chicken format)
+           (chicken io)
+           (chicken pathname)
+           (chicken platform)
+           (chicken port)
+           (chicken process)
+           (chicken process-context)
+           (chicken string)
+           (chicken time)
+           (chicken time.posix))
+   (import http-client srfi-1 srfi-13)
+   (import salmonella-run-publish-params))
+  (else
+   (error "Unsupported CHICKEN version.")))
 
 (define software-platform (symbol->string (software-version)))
 
@@ -61,7 +84,7 @@
            #f)))
     (lambda (program)
       (if (absolute-pathname? program)
-          (if (file-execute-access? program)
+          (if (and (file-exists? program) (file-executable? program))
               program
               (not-found program))
           (or (and-let* ((path (alist-ref program cache equal?)))
@@ -71,7 +94,8 @@
                     (not-found program)
                     (let* ((path (car paths))
                            (program-path (make-pathname path program)))
-                      (cond ((file-execute-access? program-path)
+                      (cond ((and (file-exists? program-path)
+                                  (file-executable? program-path))
                              (set! cache (cons (cons program program-path)
                                                cache))
                              program-path)
@@ -180,10 +204,15 @@
   ;; values.  The bindings get appended to the current environment
   ;; variables/values and converted to a format suitable for
   ;; `process''s ENVIRONMENT-LIST.
-  (map (lambda (var/val)
-         (conc (car var/val) "=" (cdr var/val)))
-       (append (get-environment-variables)
-               vars/vals)))
+  (cond-expand
+   (chicken-4
+    (map (lambda (var/val)
+           (conc (car var/val) "=" (cdr var/val)))
+         (append (get-environment-variables)
+                 vars/vals)))
+   (chicken-5
+    (append (get-environment-variables)
+            vars/vals))))
 
 (define (! cmd args #!key dir publish-dir (env '()) output-file (abort-on-non-zero? #t))
   (let ((args (map ->string args))
@@ -203,7 +232,7 @@
                         ((hanging-process-killer-program-args)
                          pid (make-pathname publish-dir
                                             "hanging-processes.log")))))))
-      (let ((output (read-all in)))
+      (let ((output (with-input-from-port in read-string)))
 	(let-values (((pid exit-normal? status) (process-wait pid)))
           (close-input-port in)
           (close-output-port out)
@@ -335,7 +364,7 @@
                 (yesterday-clog-tmp
                  (make-pathname (tmp-dir) "yesterday.log.bz2")))
             (cond ((file-exists? yesterday-clog)
-                   (file-copy yesterday-clog
+                   (copy-file yesterday-clog
                               yesterday-clog-tmp
                               'clobber)
                    (! "bzip2" `(-d ,yesterday-clog-tmp) dir: (tmp-dir))

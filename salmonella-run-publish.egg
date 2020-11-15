@@ -1,0 +1,20 @@
+;;; salmonella-run-publish.egg -*- scheme -*-
+
+((synopsis "Run salmonella and publish results")
+ (author "Mario Domenech Goulart")
+ (license "BSD")
+ (category tools)
+ (dependencies http-client
+               salmonella
+               (salmonella-diff "1.1")
+               salmonella-feeds
+               salmonella-html-report
+               srfi-1
+               srfi-13)
+ (test-dependencies simple-sha1
+                    test)
+ (component-options
+  (csc-options "-O3" "-d1"))
+ (components (extension salmonella-run-publish-params)
+             (program salmonella-run-publish
+                      (component-dependencies salmonella-run-publish-params))))

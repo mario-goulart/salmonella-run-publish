@@ -13,9 +13,23 @@
   before-make-bootstrap-hook
   )
 
-(import chicken scheme)
-(use extras posix files)
-(use http-client)
+(import scheme)
+(cond-expand
+  (chicken-4
+   (import chicken)
+   (use extras posix files)
+   (use http-client)
+   (define read-file read-list))
+  (chicken-5
+   (import (chicken base)
+           (chicken io)
+           (chicken format)
+           (chicken pathname)
+           (chicken platform)
+           (chicken process-context))
+   (import http-client))
+  (else
+   (error "Unsupported CHICKEN version.")))
 
 
 ;;
@@ -153,7 +167,7 @@
      (with-input-from-request
       (sprintf "~a?release=~a&list=1" (henrietta-uri) (chicken-release))
       #f
-      read-file))))
+      read-list))))
 
 (define pre-built-chicken
   ;; Path to the installation prefix of a pre-built CHICKEN.  If this
