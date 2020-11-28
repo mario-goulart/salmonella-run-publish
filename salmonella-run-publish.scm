@@ -465,6 +465,15 @@
   (! "gzip" `(-9 -f -S z ,(log-file))
      abort-on-non-zero?: #f
      dir: (tmp-dir))
+
+  ;; The OpenBSD implementation of gzip appends a `.<suffix>' string
+  ;; to filenames when given `-S <suffix>'.  That behavior differs
+  ;; from the busybox and GNU implementations.  The code below works
+  ;; around the case in OpenBSD.
+  (let ((bad-filename (string-append (log-file) ".z")))
+    (when (file-exists? bad-filename)
+      (rename-file bad-filename (string-append (log-file) "z") 'clobber)))
+
   (for-each (lambda (file)
               (when (file-exists? file)
                 (! "cp" `(-R ,file ,publish-dir)
