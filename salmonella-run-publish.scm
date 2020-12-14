@@ -278,6 +278,7 @@
              (append
               (list
                (string-append "PLATFORM=" make-platform)
+               (string-append "PREFIX=" chicken-prefix)
                (string-append "C_COMPILER=" (c-compiler))
                (string-append "CXX_COMPILER=" (c++-compiler)))
               (if (debug-build?)
