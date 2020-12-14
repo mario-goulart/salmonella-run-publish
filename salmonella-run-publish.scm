@@ -288,18 +288,18 @@
                   '()))))
 
         ;; make boot-chicken
-        (! "echo" ; (make-program)
+        (! (make-program)
            (append common-params `(,(string-append "CHICKEN=" chicken-bootstrap)
                                    spotless clean confclean boot-chicken))
            dir: chicken-core-dir)
 
         ;; make install
-        (! "echo" ; (make-program)
+        (! (make-program)
            (append common-params '("CHICKEN=./chicken-boot" spotless install))
            dir: chicken-core-dir)
 
         ;; make check
-        (! "echo" ; (make-program)
+        (! (make-program)
            (append common-params '("CHICKEN=./chicken-boot" check))
            dir: chicken-core-dir)
 
