@@ -274,33 +274,36 @@
 
       ((before-make-bootstrap-hook) chicken-core-dir)
 
-      ;; make boot-chicken
-      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                          ,(string-append "C_COMPILER=" (c-compiler))
-                          ,(string-append "CXX_COMPILER=" (c++-compiler))
-                          ,(string-append "CHICKEN=" chicken-bootstrap)
-                          spotless clean confclean boot-chicken)
-         dir: chicken-core-dir)
+      (let ((common-params
+             (append
+              (list
+               (string-append "PLATFORM=" make-platform)
+               (string-append "C_COMPILER=" (c-compiler))
+               (string-append "CXX_COMPILER=" (c++-compiler)))
+              (if (debug-build?)
+                  (list "DEBUGBUILD=1")
+                  '())
+              (if (optimize-for-speed?)
+                  (list "OPTIMIZE_FOR_SPEED=1")
+                  '()))))
 
-      ;; make install
-      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                          ,(string-append "C_COMPILER=" (c-compiler))
-                          ,(string-append "CXX_COMPILER=" (c++-compiler))
-                          ,(string-append "PREFIX=" chicken-prefix)
-                          "CHICKEN=./chicken-boot"
-                          spotless install)
-         dir: chicken-core-dir)
+        ;; make boot-chicken
+        (! "echo" ; (make-program)
+           (append common-params `(,(string-append "CHICKEN=" chicken-bootstrap)
+                                   spotless clean confclean boot-chicken))
+           dir: chicken-core-dir)
 
-      ;; make check
-      (! (make-program) `(,(string-append "PLATFORM=" make-platform)
-                          ,(string-append "C_COMPILER=" (c-compiler))
-                          ,(string-append "CXX_COMPILER=" (c++-compiler))
-                          ,(string-append "PREFIX=" chicken-prefix)
-                          ,(string-append "CHICKEN=./chicken-boot")
-                          check)
-         dir: chicken-core-dir)
+        ;; make install
+        (! "echo" ; (make-program)
+           (append common-params '("CHICKEN=./chicken-boot" spotless install))
+           dir: chicken-core-dir)
 
-      ((after-make-check-hook) chicken-prefix)))))
+        ;; make check
+        (! "echo" ; (make-program)
+           (append common-params '("CHICKEN=./chicken-boot" check))
+           dir: chicken-core-dir)
+
+        ((after-make-check-hook) chicken-prefix))))))
 
 
 (define (run-salmonella)

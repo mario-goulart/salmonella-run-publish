@@ -6,7 +6,7 @@
   create-report-tarball salmonella-diff-link-mode? chicken-release
   run-salmonella? hanging-process-killer-program
   hanging-process-killer-program-args salmonella-path
-  list-eggs pre-built-chicken instances
+  list-eggs pre-built-chicken instances debug-build? optimize-for-speed?
 
   ;;; Hooks
   after-make-check-hook
@@ -107,6 +107,12 @@
 
 (define c++-compiler
   (make-parameter "g++"))
+
+(define debug-build?
+  (make-parameter #f))
+
+(define optimize-for-speed?
+  (make-parameter #f))
 
 (define c-compiler-publish-name
   ;; This parameter can be useful to publish the compiler name without
