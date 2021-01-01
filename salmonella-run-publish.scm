@@ -37,11 +37,13 @@
 (import scheme)
 (cond-expand
   (chicken-4
-   (import chicken)
+   (import (rename chicken (rename-file c4-rename-file)))
    (use posix utils srfi-1 srfi-13 irregex data-structures ports files extras)
    (use http-client salmonella-run-publish-params)
    (declare (uses chicken-syntax))
-   (define file-copy copy-file)
+   (define copy-file file-copy)
+   (define (rename-file old new #!optional clobber)
+     (c4-rename-file old new))
    (define file-executable? file-execute-access?))
   (chicken-5
    (import (chicken base)

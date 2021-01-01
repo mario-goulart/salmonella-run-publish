@@ -19,7 +19,7 @@
    (import chicken)
    (use extras posix files)
    (use http-client)
-   (define read-file read-list))
+   (define read-list read-file))
   (chicken-5
    (import (chicken base)
            (chicken io)
