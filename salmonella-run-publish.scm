@@ -15,9 +15,8 @@
 ;; - salmonella-html-report
 ;; - salmonella-feeds
 ;; - salmonella-diff
-;; - henrietta-cache (only in local-mode)
-;; - svn (only in local-mode)
-;; - git
+;; - svn (only in non-offline mode)
+;; - git (only in non-offline mode)
 ;; - bzip2
 ;; - chicken tools (chicken, csi, chicken-install)
 ;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
@@ -29,7 +28,6 @@
 ;; TODO
 ;; - loop reading commands output port instead of read-string
 ;; - substitute system `rm' by some scheme code
-;; - local-mode
 ;; - notify vandusen
 
 (module salmonella-run-publish-app ()
@@ -38,10 +36,18 @@
 (cond-expand
   (chicken-4
    (import (rename chicken (rename-file c4-rename-file)))
+   (import (rename setup-api
+                   (copy-file c4-copy-file)
+                   ;; The following renamed procedures are not used --
+                   ;; just to prevent warnings.
+                   (move-file c4-move-file)
+                   (program-path c4-program-path)
+                   (find-program c4-find-program)))
    (use posix utils srfi-1 srfi-13 irregex data-structures ports files extras)
    (use http-client salmonella-run-publish-params)
    (declare (uses chicken-syntax))
    (define copy-file file-copy)
+   (define move-file file-move)
    (define (rename-file old new #!optional clobber)
      (c4-rename-file old new))
    (define file-executable? file-execute-access?))
@@ -141,17 +147,12 @@
   (let* ((required-programs
           (append `("bzip2"
                     "dot"
-                    "git"
                     "gzip"
+                    "tar"
                     ,(salmonella-program)
                     ,(program-path "salmonella-diff")
                     ,(program-path "salmonella-feeds")
-                    ,(program-path "salmonella-html-report")
-                    "svn"
-                    "tar")
-                  (if (local-mode?)
-                      `(,(program-path "henrietta-cache"))
-                      '())
+                    ,(program-path "salmonella-html-report"))
                   (if (chicken-bootstrap-prefix)
                       '()
                       '("csi"
@@ -159,6 +160,12 @@
                   (if (hanging-process-killer-program)
                       `(,(program-path (hanging-process-killer-program)))
                       '())
+                  (if (chicken-source-dir)
+                      '()
+                      (list "git"))
+                  (if (salmonella-custom-feeds-dir)
+                      '()
+                      (list "svn"))
                   ))
          (missing-programs (remove find-program required-programs)))
     (when (chicken-bootstrap-prefix)
@@ -251,7 +258,17 @@
           (cons status output))))))
 
 
+(define (get-chicken-version chicken-prefix)
+  ;; Return the CHICKEN version
+  (cdr (! (make-pathname (list chicken-prefix "bin") "csi")
+          '(-p
+            "(handle-exceptions exn \
+               (chicken-version) \
+               (eval '(begin (import chicken.platform) (chicken-version))))"))))
+
+
 (define (build-chicken-core chicken-core-dir chicken-prefix)
+  ;; Build CHICKEN and return its version
   (cond
    ((pre-built-chicken)
     ;; When a pre-built CHICKEN is provided, just run hooks in order
@@ -263,16 +280,17 @@
                (make-pathname (list (chicken-bootstrap-prefix) "bin") "chicken")
                "chicken")))
 
-      ;; Get the most recent version of the chicken-core
-      (if (file-exists? chicken-core-dir)
-          (begin
-            (! "git" '(fetch --all) dir: chicken-core-dir)
-            (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
-            (! "git" '(pull) dir: chicken-core-dir)
-            (! "git" '(clean -f) dir: chicken-core-dir)
-            (! "git" '(checkout -f) dir: chicken-core-dir))
-          (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
-             dir: (tmp-dir)))
+      ;; Get the most recent version of the chicken-core source code
+      (unless (chicken-source-dir)
+        (if (file-exists? chicken-core-dir)
+            (begin
+              (! "git" '(fetch --all) dir: chicken-core-dir)
+              (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
+              (! "git" '(pull) dir: chicken-core-dir)
+              (! "git" '(clean -f) dir: chicken-core-dir)
+              (! "git" '(checkout -f) dir: chicken-core-dir))
+            (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
+               dir: (tmp-dir))))
 
       ((before-make-bootstrap-hook) chicken-core-dir)
 
@@ -306,12 +324,30 @@
            (append common-params '("CHICKEN=./chicken-boot" check))
            dir: chicken-core-dir)
 
-        ((after-make-check-hook) chicken-prefix))))))
+        ((after-make-check-hook) chicken-prefix)))))
+  (get-chicken-version chicken-prefix))
 
+(define (tweak-setup-defaults chicken-prefix)
+  ;; 1. Make a backup copy of the <chicken-prefix>/share/chicken/setup.defaults file
+  ;; 2. Tweak setup.defaults (currently only append a `(location ...)' form to it)
+  ;; 3. Return a pair (<setup-defaults> . <setup-defaults-backup>) so that the
+  ;;    original setup.defaults file can be restored when needed
+  (let ((setup-defaults
+         (make-pathname (list chicken-prefix "share" "chicken")
+                        "setup.defaults"))
+        (setup-defaults-backup (create-temporary-file "salmonella-run-publish")))
+    (copy-file setup-defaults setup-defaults-backup 'clobber)
+    (with-output-to-file setup-defaults
+      (lambda ()
+        (write `(location ,(eggs-source-dir)))
+        (newline))
+      append:)
+    (cons setup-defaults setup-defaults-backup)))
 
 (define (run-salmonella)
   (let ((salmonella-repo-dir (make-pathname (tmp-dir) "salmonella-repo"))
-        (chicken-core-dir (make-pathname (tmp-dir) "chicken-core"))
+        (chicken-core-dir (or (chicken-source-dir)
+                              (make-pathname (tmp-dir) "chicken-core")))
         (chicken-prefix (or (pre-built-chicken)
                             (make-pathname (tmp-dir) "chicken"))))
     ;; Remove previous run data
@@ -327,34 +363,63 @@
                 salmonella-report))
 
     ;; Build chicken
-    (build-chicken-core chicken-core-dir chicken-prefix)
+    (let* ((chicken-version
+            (build-chicken-core chicken-core-dir chicken-prefix))
+           (chicken-major-version
+            (string->number (car (string-split chicken-version "."))))
+           (restore-setup-defaults #f))
 
-    ;; Run salmonella
-    (! "rm" `(-rf ,salmonella-repo-dir))
-    (let ((args
-           (append
-            (if (instances)
-                (list (conc "--instances=" (instances)))
-                '())
-            (if (null? (skip-eggs))
-                '()
-                (list
-                 (string-append "--skip-eggs="
-                                (string-intersperse
-                                 (map ->string (skip-eggs))
-                                 ","))))
-            (list
-             (if (keep-repo?)
-                 "--keep-repo"
-                 "--clear-chicken-home")
-             "--log-file=salmonella.log"
-             (string-append "--repo-dir=" salmonella-repo-dir)
-             (string-append "--chicken-installation-prefix=" chicken-prefix))
-            (map symbol->string ((list-eggs))))))
-      (! (salmonella-program) args
-         dir: "."
-         abort-on-non-zero?: #f
-         publish-dir: (tmp-dir)))))
+      ;; Run salmonella
+      (! "rm" `(-rf ,salmonella-repo-dir))
+      (let ((args
+             (append
+              (if (eggs-source-dir)
+                  (case chicken-major-version
+                    ((4)
+                     (list
+                      (string-append
+                       "--chicken-install-args="
+                       (sprintf "-debug -t local -l ~a -prefix <repo> -test"
+                                (qs (eggs-source-dir))))))
+                    ((5)
+                     (set! restore-setup-defaults
+                           (tweak-setup-defaults chicken-prefix))
+                     '())
+                    (else
+                     (error 'run-salmonella "Unsupported CHICKEN major version"
+                            chicken-major-version)))
+                  '())
+              (if (eggs-doc-dir)
+                  (list (sprintf "--eggs-doc-dir=~a" (qs (eggs-doc-dir))))
+                  '())
+              (if (instances)
+                  (list (conc "--instances=" (instances)))
+                  '())
+              (if (null? (skip-eggs))
+                  '()
+                  (list
+                   (string-append "--skip-eggs="
+                                  (string-intersperse
+                                   (map ->string (skip-eggs))
+                                   ","))))
+              (list
+               (if (keep-repo?)
+                   "--keep-repo"
+                   "--clear-chicken-home")
+               "--log-file=salmonella.log"
+               (string-append "--repo-dir=" salmonella-repo-dir)
+               (string-append "--chicken-installation-prefix=" chicken-prefix))
+              (map symbol->string ((list-eggs))))))
+        (let ((status/output
+               (! (salmonella-program) args
+                  dir: "."
+                  abort-on-non-zero?: #f
+                  publish-dir: (tmp-dir))))
+          (when restore-setup-defaults
+            (move-file (cdr restore-setup-defaults)
+                       (car restore-setup-defaults)
+                       'clobber))
+          status/output)))))
 
 (define yesterday-log-path
   ;; Return the path to the yesterday's log file if it exists; or #f
@@ -404,14 +469,16 @@
 (define (process-results publish-base-dir publish-web-dir today-dir
                          yesterday-dir yesterday-web-dir feeds-dir
                          feeds-web-dir)
-  (let ((custom-feeds-dir (make-pathname (tmp-dir) "custom-feeds")))
-    (create-directory feeds-dir 'with-parents)
-    (! "svn" '(co
-               --username=anonymous
-               --password=
-               "https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds"
-               custom-feeds)
-       dir: (tmp-dir))
+  (let ((custom-feeds-dir (or (salmonella-custom-feeds-dir)
+                              (make-pathname (tmp-dir) "custom-feeds"))))
+    (unless (salmonella-custom-feeds-dir)
+      (create-directory feeds-dir 'with-parents)
+      (! "svn" '(co
+                 --username=anonymous
+                 --password=
+                 "https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds"
+                 custom-feeds)
+         dir: (tmp-dir)))
 
     (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
       (let ((custom-feeds-web-dir
