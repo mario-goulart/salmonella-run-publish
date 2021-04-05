@@ -289,8 +289,15 @@
               (! "git" '(pull) dir: chicken-core-dir)
               (! "git" '(clean -f) dir: chicken-core-dir)
               (! "git" '(checkout -f) dir: chicken-core-dir))
-            (! "git" `(clone -b ,(chicken-core-branch) ,(chicken-core-git-uri))
-               dir: (tmp-dir))))
+            (let ((clone-args
+                   (append
+                    `(clone
+                      ,(chicken-core-git-uri)
+                      --branch ,(chicken-core-branch))
+                    (if (git-clone-depth)
+                        `(--depth ,(git-clone-depth))
+                        '()))))
+              (! "git" clone-args dir: (tmp-dir)))))
 
       ((before-make-bootstrap-hook) chicken-core-dir)
 

@@ -7,6 +7,7 @@
   run-salmonella? hanging-process-killer-program
   hanging-process-killer-program-args salmonella-path
   list-eggs pre-built-chicken instances debug-build? optimize-for-speed?
+  git-clone-depth
 
   ;;; Offline mode
   eggs-source-dir eggs-doc-dir salmonella-custom-feeds-dir chicken-source-dir
@@ -58,6 +59,17 @@
 (define chicken-core-branch
   ;; This will only be used if chicken-source-dir is #f.
   (make-parameter "master"))
+
+(define git-clone-depth
+  ;; This parameter gets mapped to the --depth git command line option
+  ;; when cloning the chicken-core repository.  If #f, --depth will
+  ;; not be passed to git.
+  ;;
+  ;; Note that if this parameter is non-#f, not all branches will be
+  ;; fetched, so most likely it won't be feasible to reuse a
+  ;; previously cloned copy of the git repository to switch between
+  ;; remote branches.
+  (make-parameter 1))
 
 (define make-program
   (make-parameter
