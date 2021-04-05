@@ -35,6 +35,15 @@
   (else
    (error "Unsupported CHICKEN version.")))
 
+;;
+;; Helper guard procedures
+;;
+(define (ensure-integer val)
+  (cond ((not val)
+         #f)
+        ((integer? val)
+         (inexact->exact val))
+        (else (error 'ensure-integer "Invalid value" val))))
 
 ;;
 ;; User-configurable parameters
@@ -69,7 +78,7 @@
   ;; fetched, so most likely it won't be feasible to reuse a
   ;; previously cloned copy of the git repository to switch between
   ;; remote branches.
-  (make-parameter 1))
+  (make-parameter 1 ensure-integer))
 
 (define make-program
   (make-parameter
@@ -89,7 +98,7 @@
   ;; chicken-core build system (i.e., parallel builds).  Note that
   ;; parallel builds only work starting from 5329d3554 in
   ;; chicken-core.
-  (make-parameter #f))
+  (make-parameter #f ensure-integer))
 
 (define keep-repo?
   ;; salmonella's --keep-repo option
@@ -163,7 +172,7 @@
 
 ;; Currently only used to build up the henrietta URI to list eggs
 (define chicken-release
-  (make-parameter 4))
+  (make-parameter 4 ensure-integer))
 
 (define run-salmonella?
   (make-parameter #t))
