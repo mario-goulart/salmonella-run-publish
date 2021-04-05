@@ -7,7 +7,7 @@
   run-salmonella? hanging-process-killer-program
   hanging-process-killer-program-args salmonella-path
   list-eggs pre-built-chicken instances debug-build? optimize-for-speed?
-  git-clone-depth
+  git-clone-depth make-jobs
 
   ;;; Offline mode
   eggs-source-dir eggs-doc-dir salmonella-custom-feeds-dir chicken-source-dir
@@ -81,6 +81,14 @@
   ;; If bound to an integer, use salmonella-epidemy instead of
   ;; salmonella.  The integer number represents the number of
   ;; salmonella instances to run.
+  (make-parameter #f))
+
+(define make-jobs
+  ;; If bound to an integer, it'll be mapped to the -j option for make
+  ;; when building the `all' and `boot-chicken' targets of the
+  ;; chicken-core build system (i.e., parallel builds).  Note that
+  ;; parallel builds only work starting from 5329d3554 in
+  ;; chicken-core.
   (make-parameter #f))
 
 (define keep-repo?
