@@ -14,7 +14,7 @@
  (test-dependencies simple-sha1
                     test)
  (component-options
-  (csc-options "-O3" "-d1"))
+  (csc-options "-O0" "-d3"))
  (components (extension salmonella-run-publish-params)
              (program salmonella-run-publish
                       (component-dependencies salmonella-run-publish-params))))
