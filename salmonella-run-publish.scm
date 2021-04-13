@@ -225,11 +225,13 @@
 
 (define (! cmd args #!key dir publish-dir (env '()) output-file (abort-on-non-zero? #t))
   (let ((args (map ->string args))
-        (cwd (and dir (current-directory))))
+        (cwd (and dir (current-directory)))
+        (start (current-seconds))
+        (cmd-line (string-intersperse (cons cmd (map ->string args)))))
     (when dir
       (change-directory dir)
-      (debug "@" (current-directory)))
-    (debug (string-intersperse (cons cmd args)))
+      (debug "[CD] " (current-directory)))
+    (debug "[RUN] " cmd-line)
     (let-values (((in out pid)
 		  (process (find-program cmd) args (reuse-environment env))))
       (when (and publish-dir (hanging-process-killer-program))
@@ -255,6 +257,8 @@
             (when abort-on-non-zero?
               (error '! (sprintf "Command '~a ~a' exited ~a."
                                  cmd args status))))
+          (debug "[TIME] " (- (current-seconds) start)
+                 " seconds. Command: " cmd-line)
           (cons status output))))))
 
 
