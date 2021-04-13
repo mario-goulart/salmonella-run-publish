@@ -247,7 +247,8 @@
 	(let-values (((pid exit-normal? status) (process-wait pid)))
           (close-input-port in)
           (close-output-port out)
-          (debug output)
+          (unless (eof-object? output)
+            (debug output))
           (when output-file
             (with-output-to-file output-file (cut display output)))
           (when dir (change-directory cwd))
