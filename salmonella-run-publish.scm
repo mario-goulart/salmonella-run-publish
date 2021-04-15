@@ -461,7 +461,9 @@
                    (copy-file yesterday-clog
                               yesterday-clog-tmp
                               'clobber)
-                   (! "bzip2" `(-d ,yesterday-clog-tmp) dir: (tmp-dir))
+                   (! "bzip2" `(-d ,yesterday-clog-tmp)
+                      dir: (tmp-dir)
+                      abort-on-non-zero?: #f)
                    (set! log-path (make-pathname (tmp-dir) "yesterday.log")))
                   (else (set! log-path #f))))
           log-path))))
@@ -487,6 +489,7 @@
 	      '())
 	  (list yesterday-log
 		today-log))
+         abort-on-non-zero?: #f
          dir: (tmp-dir)))))
 
 (define (process-results publish-base-dir publish-web-dir today-dir
@@ -501,6 +504,7 @@
                  --password=
                  "https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds"
                  custom-feeds)
+         abort-on-non-zero?: #f
          dir: (tmp-dir)))
 
     (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
@@ -537,6 +541,7 @@
                       (sprintf "--diff-label1='yesterday (~a)'" yesterday-dir)
                       (sprintf "--diff-label2='today (~a)'" today-dir))
                      '())))
+           abort-on-non-zero?: #f
            dir: (tmp-dir)))
 
       ;; Generate the HTML report
@@ -545,6 +550,7 @@
                             '())))
         (! (program-path "salmonella-html-report")
            `(,@compressed salmonella.log salmonella-report)
+           abort-on-non-zero?: #f
            dir: (tmp-dir)))
 
       ;; Generate diff against yesterday's log (if it exists)
@@ -554,6 +560,7 @@
 (define (publish-results publish-dir)
   ;; When calling ! here, use abort-on-non-zero?: #f, so that logs get
   ;; published even when something fails.
+  (debug "Publishing results to " publish-dir)
   (create-directory publish-dir 'with-parents)
   (! "bzip2" `(-9 salmonella.log)
      abort-on-non-zero?: #f
