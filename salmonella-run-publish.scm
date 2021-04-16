@@ -86,10 +86,7 @@
         (paths (string-split (get-environment-variable "PATH") ":"))
         (not-found
          (lambda (program)
-           (with-output-to-port (current-error-port)
-             (lambda ()
-               (printf "find-program: error: ~a not found.\n" program)))
-           #f)))
+           (error 'find-program "Program not found" program))))
     (lambda (program)
       (if (absolute-pathname? program)
           (if (and (file-exists? program) (file-executable? program))
