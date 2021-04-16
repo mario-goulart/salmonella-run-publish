@@ -375,7 +375,6 @@
                 salmonella.log
                 salmonella.log.bz2
                 salmonella-repo
-                ,(log-file)
                 custom-feeds
                 salmonella-report))
 
