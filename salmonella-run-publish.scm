@@ -26,7 +26,6 @@
 ;;   will check if it is available.
 
 ;; TODO
-;; - loop reading commands output port instead of read-string
 ;; - substitute system `rm' by some scheme code
 ;; - notify vandusen
 
@@ -180,16 +179,8 @@
       (exit 1))))
 
 
-(define (debug . things)
-  (let ((msg (string-intersperse (map ->string things) "")))
-    (when (verbose?)
-      (print msg))
-    (when (log-file)
-      (with-output-to-file (log-file)
-        (lambda ()
-          (print msg))
-        append:))))
-
+(define (report step fmt . args)
+  (apply printf (cons (string-append "[~a] " fmt "\n") (cons step args))))
 
 (define (pad-number n zeroes)
   (define (pad num len)
@@ -220,15 +211,15 @@
     (append (get-environment-variables)
             vars/vals))))
 
-(define (! cmd args #!key dir publish-dir (env '()) output-file (abort-on-non-zero? #t))
+(define (! cmd args #!key dir publish-dir (env '()) (abort-on-non-zero? #t) collect-output)
   (let ((args (map ->string args))
         (cwd (and dir (current-directory)))
         (start (current-seconds))
         (cmd-line (string-intersperse (cons cmd (map ->string args)))))
     (when dir
       (change-directory dir)
-      (debug "[CD] " (current-directory)))
-    (debug "[RUN] " cmd-line)
+      (report 'CD (current-directory)))
+    (report 'RUN cmd-line)
     (let-values (((in out pid)
 		  (process (find-program cmd) args (reuse-environment env))))
       (when (and publish-dir (hanging-process-killer-program))
@@ -240,14 +231,19 @@
                         ((hanging-process-killer-program-args)
                          pid (make-pathname publish-dir
                                             "hanging-processes.log")))))))
-      (let ((output (with-input-from-port in read-string)))
-	(let-values (((pid exit-normal? status) (process-wait pid)))
+      (let ((output
+             (if collect-output
+                 (with-input-from-port in read-string)
+                 (begin
+                   (let loop ()
+                     (let ((line (read-line in)))
+                       (unless (eof-object? line)
+                         (print line)
+                         (loop))))
+                   #f))))
+        (let-values (((pid exit-normal? status) (process-wait pid)))
           (close-input-port in)
           (close-output-port out)
-          (unless (eof-object? output)
-            (debug output))
-          (when output-file
-            (with-output-to-file output-file (cut display output)))
           (when dir (change-directory cwd))
           (unless (zero? status)
             (fprintf (current-error-port) "Error executing '~a'.  Exit code: ~a.\n"
@@ -255,8 +251,8 @@
             (when abort-on-non-zero?
               (error '! (sprintf "Command '~a ~a' exited ~a."
                                  cmd args status))))
-          (debug "[TIME] " (- (current-seconds) start)
-                 " seconds. Command: " cmd-line)
+          (report 'TIME "~a seconds. Command: ~a"
+                  (- (current-seconds) start) cmd-line)
           (cons status output))))))
 
 
@@ -266,7 +262,8 @@
           '(-p
             "(handle-exceptions exn \
                (chicken-version) \
-               (eval '(begin (import chicken.platform) (chicken-version))))"))))
+               (eval '(begin (import chicken.platform) (chicken-version))))")
+          collect-output: #t)))
 
 
 (define (build-chicken-core chicken-core-dir chicken-prefix)
@@ -557,7 +554,7 @@
 (define (publish-results publish-dir)
   ;; When calling ! here, use abort-on-non-zero?: #f, so that logs get
   ;; published even when something fails.
-  (debug "Publishing results to " publish-dir)
+  (report 'INFO "Publishing results to ~a" publish-dir)
   (create-directory publish-dir 'with-parents)
   (! "bzip2" `(-9 salmonella.log)
      abort-on-non-zero?: #f
