@@ -3,10 +3,18 @@
 ;; generate the HTML reports.  It organizes the salmonella reports in
 ;; a directory tree like:
 ;;
+;; If a commit is given:
+;; web-dir/"commits"/c-compiler/software-platform/hardware-platform/year/month/day/commit-hash
+;;
+;; If a commit is NOT given:
 ;; web-dir/chicken-core-branch/c-compiler/software-platform/hardware-platform/year/month/day
 ;;
-;; For example:
+;; Examples:
 ;;
+;; If a commit is given:
+;; /var/www/salmonella-reports/commits/gcc/linux/x86/2012/01/28/1fc501c164b933e4aa1d8ebc979b948140b0fff6
+;;
+;; If a commit is NOT given:
 ;; /var/www/salmonella-reports/master/gcc/linux/x86/2012/01/28
 
 
@@ -266,7 +274,33 @@
           collect-output: #t)))
 
 
-(define (build-chicken-core chicken-core-dir chicken-prefix)
+(define (fetch-chicken-core chicken-core-dir commit-hash)
+  ;; Fetch the the CHICKEN source code from the chicken-core git
+  ;; repository.  If commit-hash is non-#f, check out that commit.
+  (unless (chicken-source-dir)
+    (if (file-exists? chicken-core-dir)
+        (begin
+          (! "git" '(fetch --all) dir: chicken-core-dir)
+          (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
+          (! "git" '(pull) dir: chicken-core-dir)
+          (! "git" '(clean -f) dir: chicken-core-dir)
+          (! "git" '(checkout -f) dir: chicken-core-dir)
+          (when commit-hash
+            (! "git" `(checkout ,commit-hash) dir: chicken-core-dir)))
+        (let ((clone-args
+               (append
+                `(clone
+                  ,(chicken-core-git-uri)
+                  --branch ,(chicken-core-branch))
+                (if (and (git-clone-depth) (not commit-hash))
+                    `(--depth ,(git-clone-depth))
+                    '()))))
+          (! "git" clone-args dir: (tmp-dir))
+          (when commit-hash
+            (! "git" `(checkout ,commit-hash) dir: chicken-core-dir))))))
+
+
+(define (build-chicken-core chicken-core-dir chicken-prefix commit-hash)
   ;; Build CHICKEN and return its version
   (cond
    ((pre-built-chicken)
@@ -279,24 +313,7 @@
                (make-pathname (list (chicken-bootstrap-prefix) "bin") "chicken")
                "chicken")))
 
-      ;; Get the most recent version of the chicken-core source code
-      (unless (chicken-source-dir)
-        (if (file-exists? chicken-core-dir)
-            (begin
-              (! "git" '(fetch --all) dir: chicken-core-dir)
-              (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
-              (! "git" '(pull) dir: chicken-core-dir)
-              (! "git" '(clean -f) dir: chicken-core-dir)
-              (! "git" '(checkout -f) dir: chicken-core-dir))
-            (let ((clone-args
-                   (append
-                    `(clone
-                      ,(chicken-core-git-uri)
-                      --branch ,(chicken-core-branch))
-                    (if (git-clone-depth)
-                        `(--depth ,(git-clone-depth))
-                        '()))))
-              (! "git" clone-args dir: (tmp-dir)))))
+      (fetch-chicken-core chicken-core-dir commit-hash)
 
       ((before-make-bootstrap-hook) chicken-core-dir)
 
@@ -361,7 +378,8 @@
       append:)
     (cons setup-defaults setup-defaults-backup)))
 
-(define (run-salmonella)
+
+(define (run-salmonella commit-hash)
   (let ((salmonella-repo-dir (make-pathname (tmp-dir) "salmonella-repo"))
         (chicken-core-dir (or (chicken-source-dir)
                               (make-pathname (tmp-dir) "chicken-core")))
@@ -380,7 +398,7 @@
 
     ;; Build chicken
     (let* ((chicken-version
-            (build-chicken-core chicken-core-dir chicken-prefix))
+            (build-chicken-core chicken-core-dir chicken-prefix commit-hash))
            (chicken-major-version
             (string->number (car (string-split chicken-version "."))))
            (restore-setup-defaults #f))
@@ -485,6 +503,22 @@
          abort-on-non-zero?: #f
          dir: (tmp-dir)))))
 
+
+(define (run-salmonella-html-report)
+  ;; Generate the HTML report
+  (let ((compressed (if (compress-report?)
+                        `(--compress-html --compress-graphics)
+                        '())))
+    (! (program-path "salmonella-html-report")
+       `(,@compressed salmonella.log salmonella-report)
+       abort-on-non-zero?: #f
+       dir: (tmp-dir))))
+
+
+(define (process-results-for-commit)
+  (run-salmonella-html-report))
+
+
 (define (process-results publish-base-dir publish-web-dir today-dir
                          yesterday-dir yesterday-web-dir feeds-dir
                          feeds-web-dir)
@@ -537,20 +571,13 @@
            abort-on-non-zero?: #f
            dir: (tmp-dir)))
 
-      ;; Generate the HTML report
-      (let ((compressed (if (compress-report?)
-                            `(--compress-html --compress-graphics)
-                            '())))
-        (! (program-path "salmonella-html-report")
-           `(,@compressed salmonella.log salmonella-report)
-           abort-on-non-zero?: #f
-           dir: (tmp-dir)))
+      (run-salmonella-html-report)
 
       ;; Generate diff against yesterday's log (if it exists)
       (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir))))
 
 
-(define (publish-results publish-dir)
+(define (publish-results publish-dir commit-hash)
   ;; When calling ! here, use abort-on-non-zero?: #f, so that logs get
   ;; published even when something fails.
   (report 'INFO "Publishing results to ~a" publish-dir)
@@ -570,16 +597,23 @@
     (when (file-exists? bad-filename)
       (rename-file bad-filename (string-append (log-file) "z") 'clobber)))
 
-  (for-each (lambda (file)
-              (when (file-exists? file)
-                (! "cp" `(-R ,file ,publish-dir)
-                   dir: (tmp-dir)
-                   abort-on-non-zero?: #f)))
-            `(,(string-append (log-file) "z")
-              "hanging-processes.log"
-              "yesterday-diff"
-              "salmonella-report"
-              "salmonella.log.bz2"))
+  (let ((to-publish
+         (append
+          (list
+           (string-append (log-file) "z")
+           "hanging-processes.log"
+           "salmonella-report"
+           "salmonella.log.bz2")
+          (if commit-hash
+              '()
+              (list "yesterday-diff")))))
+    (for-each (lambda (file)
+                (when (file-exists? file)
+                  (! "cp" `(-R ,file ,publish-dir)
+                     dir: (tmp-dir)
+                     abort-on-non-zero?: #f)))
+              to-publish))
+
   (when (create-report-tarball)
     (let ((env
            (case (create-report-tarball)
@@ -607,13 +641,22 @@
 
 
 (define (usage #!optional exit-code)
-  (let ((port (if (and exit-code (not (zero? exit-code)))
-                  (current-error-port)
-                  (current-output-port))))
-    (fprintf port "Usage: ~a <config file> ...\n"
-             (pathname-strip-directory (program-name)))
-    (when exit-code
-      (exit exit-code))))
+  (let* ((port (if (and exit-code (not (zero? exit-code)))
+                   (current-error-port)
+                   (current-output-port)))
+         (prog (pathname-strip-directory (program-name)))
+         (msg #<#EOF
+Usage: #prog [--commit-hash <commit hash>] <config file> ...
+
+--commit-hash <commit hash>
+  If provided #prog will build the code from the chicken-core
+  repository at <commit hash>.  Results will be generated under
+  the "commits" directory in `(web-dir)'.
+
+EOF
+))
+    (fprintf port msg)
+    (when exit-code (exit exit-code))))
 
 
 (define (die . msg)
@@ -626,16 +669,29 @@
 
 
 
-(let ((args (command-line-arguments)))
+(let ((commit-hash #f)
+      (config-files '()))
 
-  (when (or (member "-h" args)
-            (member "-help" args)
-            (member "--help" args))
-    (usage 0))
+  (let loop ((args (command-line-arguments)))
+    (unless (null? args)
+      (let ((arg (car args)))
+        (cond ((member arg '("-h" "-help" "--help"))
+               (usage 0))
+              ((string=? arg "--commit-hash")
+               (when (null? (cdr args))
+                 (die "--commit-hash: missing argument"))
+               (set! commit-hash (cadr args))
+               (loop (cddr args)))
+              (else
+               (set! config-files (cons arg config-files)))))))
 
   ;; Load config file if provided
-  (unless (null? args)
-    (for-each load args))
+  (for-each load config-files)
+
+  ;; Specifying a pre-built CHICKEN and a commit hash doesn't make
+  ;; sense
+  (when (and (pre-built-chicken) commit-hash)
+    (die "Both `(pre-build-chicken)' and --commit-hash have been provided."))
 
   (check-required-programs!)
 
@@ -646,10 +702,17 @@
   (change-directory (tmp-dir))
 
   (let* ((path-layout
-          (make-pathname (list ((branch-publish-transformer) (chicken-core-branch))
-                               (or (c-compiler-publish-name) (pathname-file (c-compiler)))
-                               software-platform)
-                         hardware-platform))
+          (make-pathname
+           (append (list (if commit-hash
+                             "commits"
+                             ((branch-publish-transformer) (chicken-core-branch)))
+                         (or (c-compiler-publish-name)
+                             (pathname-file (c-compiler)))
+                         software-platform)
+                   (if commit-hash
+                       (list hardware-platform)
+                       '()))
+           (or commit-hash hardware-platform)))
 
          ;; Publishing directory, without yyyy/mm/dd.
          (publish-base-dir (make-pathname (web-dir) path-layout))
@@ -684,15 +747,21 @@
       (begin
         (print-call-chain (current-error-port))
         (print-error-message exn (current-error-port))
-        (publish-results publish-dir)
+        (publish-results publish-dir commit-hash)
         (exit 1))
       (begin
         (when (run-salmonella?)
-          (run-salmonella))
-        (process-results publish-base-dir publish-web-dir today-dir
-                         yesterday-dir yesterday-web-dir feeds-dir
-                         feeds-web-dir)))
+          (run-salmonella commit-hash))
+        (if commit-hash
+            (process-results-for-commit)
+            (process-results publish-base-dir
+                             publish-web-dir
+                             today-dir
+                             yesterday-dir
+                             yesterday-web-dir
+                             feeds-dir
+                             feeds-web-dir))))
 
-    (publish-results publish-dir)))
+    (publish-results publish-dir commit-hash)))
 
 ) ;; end module
