@@ -346,6 +346,8 @@
         ;; make boot-chicken
         (make (common-params chicken-bootstrap) build-params '(boot-chicken))
 
+        ((after-make-bootstrap-hook) chicken-core-dir)
+
         ;; make spotless
         (make (common-params "./chicken-boot") '(spotless))
 

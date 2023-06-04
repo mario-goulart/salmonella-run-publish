@@ -15,6 +15,7 @@
   ;;; Hooks
   after-make-check-hook
   before-make-bootstrap-hook
+  after-make-bootstrap-hook
   )
 
 (import scheme)
@@ -218,6 +219,11 @@
 
 ;;; Hooks
 (define before-make-bootstrap-hook
+  (make-parameter
+   (lambda (chicken-source-dir)
+     (void))))
+
+(define after-make-bootstrap-hook
   (make-parameter
    (lambda (chicken-source-dir)
      (void))))
