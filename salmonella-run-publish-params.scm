@@ -40,6 +40,7 @@
 ;; Helper guard procedures
 ;;
 (define (ensure-integer val)
+  ;; This procedure actually also accepts #f, not only integers.
   (cond ((not val)
          #f)
         ((integer? val)
