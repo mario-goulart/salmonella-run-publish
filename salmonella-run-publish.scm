@@ -306,7 +306,9 @@
    ((pre-built-chicken)
     ;; When a pre-built CHICKEN is provided, just run hooks in order
     ((before-make-bootstrap-hook) chicken-core-dir)
-    ((after-make-check-hook) chicken-prefix))
+    (change-directory chicken-core-dir)
+    ((after-make-check-hook) chicken-prefix)
+    (change-directory chicken-core-dir))
    (else
     (let ((chicken-bootstrap
            (if (chicken-bootstrap-prefix)
@@ -316,6 +318,7 @@
       (fetch-chicken-core chicken-core-dir commit-hash)
 
       ((before-make-bootstrap-hook) chicken-core-dir)
+      (change-directory chicken-core-dir)
 
       (let ((common-params
              (lambda (chicken)
@@ -347,6 +350,7 @@
         (make (common-params chicken-bootstrap) build-params '(boot-chicken))
 
         ((after-make-bootstrap-hook) chicken-core-dir)
+        (change-directory chicken-core-dir)
 
         ;; make spotless
         (make (common-params "./chicken-boot") '(spotless))
@@ -360,7 +364,8 @@
         ;; make check
         (make (common-params "./chicken-boot") '(check))
 
-        ((after-make-check-hook) chicken-prefix)))))
+        ((after-make-check-hook) chicken-prefix)
+        (change-directory chicken-core-dir)))))
   (get-chicken-version chicken-prefix))
 
 (define (tweak-setup-defaults chicken-prefix)
