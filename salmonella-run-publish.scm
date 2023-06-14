@@ -453,7 +453,7 @@
               (map symbol->string ((list-eggs))))))
         (let ((status/output
                (! (salmonella-program) args
-                  dir: "."
+                  dir: (tmp-dir)
                   abort-on-non-zero?: #f
                   publish-dir: (tmp-dir))))
           (when restore-setup-defaults
