@@ -87,6 +87,13 @@
           "bsd"
           software-platform)))
 
+(define (save-excursion dir proc)
+  (let ((current-dir (current-directory)))
+    (change-directory dir)
+    (let ((out (proc)))
+      (change-directory current-dir)
+      out)))
+
 (define find-program
   (let ((cache '())
         ;; no windows support
@@ -393,15 +400,17 @@
         (chicken-prefix (or (pre-built-chicken)
                             (make-pathname (tmp-dir) "chicken"))))
     ;; Remove previous run data
-    (for-each (lambda (file)
-                (unless (equal? file (pre-built-chicken))
-                  (! "rm" `(-rf ,file) dir: (tmp-dir))))
-              `(,chicken-prefix
-                salmonella.log
-                salmonella.log.bz2
-                salmonella-repo
-                custom-feeds
-                salmonella-report))
+    (save-excursion (tmp-dir)
+      (lambda ()
+        (for-each (lambda (file)
+                    (unless (equal? file (pre-built-chicken))
+                      (! "rm" `(-rf ,file))))
+                  `(,chicken-prefix
+                    salmonella.log
+                    salmonella.log.bz2
+                    salmonella-repo
+                    custom-feeds
+                    salmonella-report))))
 
     ;; Build chicken
     (let* ((chicken-version
@@ -614,12 +623,13 @@
           (if commit-hash
               '()
               (list "yesterday-diff")))))
-    (for-each (lambda (file)
-                (when (file-exists? file)
-                  (! "cp" `(-R ,file ,publish-dir)
-                     dir: (tmp-dir)
-                     abort-on-non-zero?: #f)))
-              to-publish))
+    (save-excursion (tmp-dir)
+      (lambda ()
+        (for-each (lambda (file)
+                    (when (file-exists? file)
+                      (! "cp" `(-R ,file ,publish-dir)
+                         abort-on-non-zero?: #f)))
+                  to-publish)))
 
   (when (create-report-tarball)
     (let ((env
