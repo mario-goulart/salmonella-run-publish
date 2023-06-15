@@ -629,7 +629,7 @@
                     (when (file-exists? file)
                       (! "cp" `(-R ,file ,publish-dir)
                          abort-on-non-zero?: #f)))
-                  to-publish)))
+                  to-publish))))
 
   (when (create-report-tarball)
     (let ((env
