@@ -333,9 +333,7 @@
    ((pre-built-chicken)
     ;; When a pre-built CHICKEN is provided, just run hooks in order
     ((before-make-bootstrap-hook) chicken-core-dir)
-    (change-directory chicken-core-dir)
-    ((after-make-check-hook) chicken-prefix)
-    (change-directory chicken-core-dir))
+    ((after-make-check-hook) chicken-prefix))
    (else
     (let ((chicken-bootstrap
            (if (chicken-bootstrap-prefix)
