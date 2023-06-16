@@ -1,5 +1,5 @@
 (module salmonella-run-publish-params
- (work-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
+ (work-dir chicken-bootstrap-prefix chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
@@ -67,9 +67,6 @@
    ;; Chicken installation prefix to be used to build the bootstrap
    ;; compiler. When `#f', the chicken tools from path are picked.
   (make-parameter #f))
-
-(define log-file
-  (make-parameter (make-pathname (work-dir) "run-salmonella.log")))
 
 (define chicken-core-git-uri
   ;; This will only be used if chicken-source-dir is #f.

@@ -88,6 +88,9 @@
           "bsd"
           software-platform)))
 
+(define log-file
+  (make-parameter (make-pathname (work-dir) "run-salmonella.log")))
+
 (define (save-excursion dir proc)
   (let ((current-dir (current-directory)))
     (change-directory dir)
