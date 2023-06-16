@@ -690,12 +690,22 @@
                    (current-output-port)))
          (prog (pathname-strip-directory (program-name)))
          (msg #<#EOF
-Usage: #prog [--commit-hash <commit hash>] <config file> ...
+Usage: #prog [<options>] <config file> ...
+
+Command line options clobber settings in configuration files.
+
+<options>:
 
 --commit-hash <commit hash>
   If provided #prog will build the code from the chicken-core
   repository at <commit hash>.  Results will be generated under
   the "commits" directory in `(web-dir)'.
+
+--work-dir <directory>
+  Directory where salmonella-run-publish will write the files for
+  processing before publishing.  Equivalent to the `work-dir`
+  parameter.  If the given directory doesn't exist, it will be
+  created.
 
 EOF
 ))
@@ -714,6 +724,7 @@ EOF
 
 
 (let ((commit-hash #f)
+      (%work-dir #f)
       (config-files '()))
 
   (let loop ((args (command-line-arguments)))
@@ -726,11 +737,22 @@ EOF
                  (die "--commit-hash: missing argument"))
                (set! commit-hash (cadr args))
                (loop (cddr args)))
+              ((string=? arg "--work-dir")
+               (when (null? (cdr args))
+                 (die "--work-dir: missing argument"))
+               (set! %work-dir (cadr args))
+               (loop (cddr args)))
               (else
                (set! config-files (cons arg config-files)))))))
 
   ;; Load config file if provided
   (for-each load config-files)
+
+  ;; --work-dir clobbers `work-dir` in config files
+  (when %work-dir
+    (work-dir %work-dir))
+
+  (create-directory (work-dir) 'with-parents)
 
   ;; Specifying a pre-built CHICKEN and a commit hash doesn't make
   ;; sense
