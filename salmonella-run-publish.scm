@@ -319,7 +319,7 @@
                 (if (and (git-clone-depth) (not commit-hash))
                     `(--depth ,(git-clone-depth))
                     '()))))
-          (! "git" clone-args dir: (tmp-dir))
+          (! "git" clone-args dir: (work-dir))
           (when commit-hash
             (! "git" `(checkout ,commit-hash) dir: chicken-core-dir))))))
 
@@ -415,13 +415,13 @@
 
 
 (define (run-salmonella commit-hash)
-  (let ((salmonella-repo-dir (make-pathname (tmp-dir) "salmonella-repo"))
+  (let ((salmonella-repo-dir (make-pathname (work-dir) "salmonella-repo"))
         (chicken-core-dir (or (chicken-source-dir)
-                              (make-pathname (tmp-dir) "chicken-core")))
+                              (make-pathname (work-dir) "chicken-core")))
         (chicken-prefix (or (pre-built-chicken)
-                            (make-pathname (tmp-dir) "chicken"))))
+                            (make-pathname (work-dir) "chicken"))))
     ;; Remove previous run data
-    (save-excursion (tmp-dir)
+    (save-excursion (work-dir)
       (lambda ()
         (for-each (lambda (file)
                     (unless (equal? file (pre-built-chicken))
@@ -483,9 +483,9 @@
               (map symbol->string ((list-eggs))))))
         (let ((status/output
                (! (salmonella-program) args
-                  dir: (tmp-dir)
+                  dir: (work-dir)
                   abort-on-non-zero?: #f
-                  publish-dir: (tmp-dir)
+                  publish-dir: (work-dir)
 		  timeout: (if (keep-repo?)
 			       (timeout/salmonella-cached)
 			       (timeout/salmonella-not-cached)))))
@@ -499,7 +499,7 @@
   ;; Return the path to the yesterday's log file if it exists; or #f
   ;; if doesn't exist.
   ;;
-  ;; The uncompressed log file is stored under (tmp-dir).
+  ;; The uncompressed log file is stored under (work-dir).
   (let ((log-path 'not-set))
     (lambda (publish-base-dir yesterday-dir)
       (if (eq? log-path 'not-set)
@@ -507,22 +507,22 @@
                  (make-pathname (list publish-base-dir yesterday-dir)
                                 "salmonella.log.bz2"))
                 (yesterday-clog-tmp
-                 (make-pathname (tmp-dir) "yesterday.log.bz2")))
+                 (make-pathname (work-dir) "yesterday.log.bz2")))
             (cond ((file-exists? yesterday-clog)
                    (copy-file yesterday-clog
                               yesterday-clog-tmp
                               'clobber)
                    (! "bzip2" `(-d ,yesterday-clog-tmp)
-                      dir: (tmp-dir)
+                      dir: (work-dir)
                       abort-on-non-zero?: #f)
-                   (set! log-path (make-pathname (tmp-dir) "yesterday.log")))
+                   (set! log-path (make-pathname (work-dir) "yesterday.log")))
                   (else (set! log-path #f))))
           log-path))))
 
 
 (define (diff publish-base-dir publish-web-dir yesterday-dir yesterday-web-dir)
   (let ((yesterday-log (yesterday-log-path publish-base-dir yesterday-dir))
-        (today-log (make-pathname (tmp-dir) "salmonella.log")))
+        (today-log (make-pathname (work-dir) "salmonella.log")))
     (when yesterday-log
       (! (program-path "salmonella-diff")
 	 (append
@@ -541,7 +541,7 @@
 	  (list yesterday-log
 		today-log))
          abort-on-non-zero?: #f
-         dir: (tmp-dir)))))
+         dir: (work-dir)))))
 
 
 (define (run-salmonella-html-report)
@@ -552,7 +552,7 @@
     (! (program-path "salmonella-html-report")
        `(,@compressed salmonella.log salmonella-report)
        abort-on-non-zero?: #f
-       dir: (tmp-dir))))
+       dir: (work-dir))))
 
 
 (define (process-results-for-commit)
@@ -563,7 +563,7 @@
                          yesterday-dir yesterday-web-dir feeds-dir
                          feeds-web-dir)
   (let ((custom-feeds-dir (or (salmonella-custom-feeds-dir)
-                              (make-pathname (tmp-dir) "custom-feeds"))))
+                              (make-pathname (work-dir) "custom-feeds"))))
     (unless (salmonella-custom-feeds-dir)
       (create-directory feeds-dir 'with-parents)
       (! "svn" '(co
@@ -572,9 +572,9 @@
                  "https://code.call-cc.org/svn/chicken-eggs/salmonella-custom-feeds"
                  custom-feeds)
          abort-on-non-zero?: #f
-         dir: (tmp-dir)))
+         dir: (work-dir)))
 
-    (when (file-exists? (make-pathname (tmp-dir) "salmonella.log"))
+    (when (file-exists? (make-pathname (work-dir) "salmonella.log"))
       (let ((custom-feeds-web-dir
              (make-absolute-pathname feeds-web-dir "custom")))
         ;; Generate the atom feeds
@@ -609,7 +609,7 @@
                       (sprintf "--diff-label2='today (~a)'" today-dir))
                      '())))
            abort-on-non-zero?: #f
-           dir: (tmp-dir)))
+           dir: (work-dir)))
 
       (run-salmonella-html-report)
 
@@ -624,10 +624,10 @@
   (create-directory publish-dir 'with-parents)
   (! "bzip2" `(-9 salmonella.log)
      abort-on-non-zero?: #f
-     dir: (tmp-dir))
+     dir: (work-dir))
   (! "gzip" `(-9 -f -S z ,(log-file))
      abort-on-non-zero?: #f
-     dir: (tmp-dir))
+     dir: (work-dir))
 
   ;; The OpenBSD implementation of gzip appends a `.<suffix>' string
   ;; to filenames when given `-S <suffix>'.  That behavior differs
@@ -647,7 +647,7 @@
           (if commit-hash
               '()
               (list "yesterday-diff")))))
-    (save-excursion (tmp-dir)
+    (save-excursion (work-dir)
       (lambda ()
         (for-each (lambda (file)
                     (when (file-exists? file)
@@ -737,10 +737,10 @@ EOF
   (check-required-programs!)
 
   ;; Create the tmp dir if it does not exists
-  (create-directory (tmp-dir) 'parents-too)
+  (create-directory (work-dir) 'parents-too)
 
   ;; Change to the tmp dir
-  (change-directory (tmp-dir))
+  (change-directory (work-dir))
 
   (let* ((path-layout
           (make-pathname

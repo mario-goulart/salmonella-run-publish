@@ -1,5 +1,5 @@
 (module salmonella-run-publish-params
- (tmp-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
+ (work-dir chicken-bootstrap-prefix log-file chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
   web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
@@ -58,8 +58,8 @@
 ;;
 ;; User-configurable parameters
 ;;
-(define tmp-dir
-  ;; Temporary directory used by this program
+(define work-dir
+  ;; Work directory used by this program
   (make-parameter
    (make-pathname (current-directory) "salmonella-run-publish")))
 
@@ -69,7 +69,7 @@
   (make-parameter #f))
 
 (define log-file
-  (make-parameter (make-pathname (tmp-dir) "run-salmonella.log")))
+  (make-parameter (make-pathname (work-dir) "run-salmonella.log")))
 
 (define chicken-core-git-uri
   ;; This will only be used if chicken-source-dir is #f.
