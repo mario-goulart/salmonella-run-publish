@@ -88,8 +88,8 @@
           "bsd"
           software-platform)))
 
-(define log-file
-  (make-parameter (make-pathname (work-dir) "run-salmonella.log")))
+;; Will be set once `work-dir' is determined
+(define log-file (make-parameter #f))
 
 (define (save-excursion dir proc)
   (let ((current-dir (current-directory)))
@@ -751,6 +751,8 @@ EOF
     (work-dir %work-dir))
 
   (create-directory (work-dir) 'with-parents)
+
+  (log-file (make-pathname (work-dir) "run-salmonella.log"))
 
   ;; Specifying a pre-built CHICKEN and a commit hash doesn't make
   ;; sense
