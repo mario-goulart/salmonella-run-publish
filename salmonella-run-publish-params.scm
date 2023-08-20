@@ -16,6 +16,14 @@
   after-make-check-hook
   before-make-bootstrap-hook
   after-make-bootstrap-hook
+
+  ;;; Timeouts
+  timeout/kill
+  timeout/chicken-build
+  timeout/chicken-install
+  timeout/chicken-test
+  timeout/salmonella-cached
+  timeout/salmonella-not-cached
   )
 
 (import scheme)
@@ -263,5 +271,28 @@
   ;; code of CHICKEN can be found.  If #f, the code will be retrieved
   ;; with git.
   (make-parameter #f))
+
+
+;;; Default timeouts (in seconds)
+
+(define timeout/kill
+  ;; Argument to timeout's -k parameter
+  (make-parameter 60))
+
+(define timeout/chicken-build
+  (make-parameter (* 40 60)))
+
+(define timeout/chicken-install
+  (make-parameter (* 5 60)))
+
+(define timeout/chicken-test
+  (make-parameter (* 40 60)))
+
+(define timeout/salmonella-cached
+  (make-parameter (* 7 60 60)))
+
+(define timeout/salmonella-not-cached
+  (make-parameter (* 26 60 60)))
+
 
 ) ;; end module

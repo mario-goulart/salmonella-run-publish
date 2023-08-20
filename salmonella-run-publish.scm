@@ -32,6 +32,7 @@
 ;; - gzip
 ;; - If hanging-process-killer-program is set, salmonella-run-publish
 ;;   will check if it is available.
+;; - timeout
 
 ;; TODO
 ;; - substitute system `rm' by some scheme code
@@ -226,7 +227,17 @@
     (append (get-environment-variables)
             vars/vals))))
 
-(define (! cmd args #!key dir publish-dir (env '()) (abort-on-non-zero? #t) collect-output)
+(define (run-kill-hanging-children pid publish-dir)
+  (system
+   (sprintf "~a ~a &"
+            (program-path (hanging-process-killer-program))
+            (string-intersperse
+             (map ->string
+                  ((hanging-process-killer-program-args)
+                   pid (make-pathname publish-dir
+                                      "hanging-processes.log")))))))
+
+(define (! cmd args #!key dir publish-dir (env '()) (abort-on-non-zero? #t) collect-output timeout)
   (let ((args (map ->string args))
         (cwd (and dir (current-directory)))
         (start (current-seconds))
@@ -236,16 +247,22 @@
       (report 'CD (current-directory)))
     (report 'RUN cmd-line)
     (let-values (((in out pid)
-		  (process (find-program cmd) args (reuse-environment env))))
+		  (if timeout
+		      (process (find-program "timeout")
+			       (append (list "-v"
+					     "-k"
+					     (or (and-let* ((t (timeout/kill)))
+						   (number->string t))
+						 "60")
+					     (number->string timeout)
+					     (find-program cmd))
+				       args)
+			       (reuse-environment env))
+		      (process (find-program cmd)
+			       args
+			       (reuse-environment env)))))
       (when (and publish-dir (hanging-process-killer-program))
-        (system
-         (sprintf "~a ~a &"
-                  (program-path (hanging-process-killer-program))
-                  (string-intersperse
-                   (map ->string
-                        ((hanging-process-killer-program-args)
-                         pid (make-pathname publish-dir
-                                            "hanging-processes.log")))))))
+	(run-kill-hanging-children pid publish-dir))
       (let ((output
              (if collect-output
                  (with-input-from-port in read-string)
@@ -347,29 +364,33 @@
                  `(-j ,(make-jobs))
                  '()))
             (make
-             (lambda args
-               (! (make-program) (apply append args) dir: chicken-core-dir))))
+             (lambda (args #!key timeout)
+               (! (make-program) args dir: chicken-core-dir timeout: timeout))))
 
         ;; cleanup
-        (make (common-params chicken-bootstrap) '(spotless clean confclean))
+        (make (append (common-params chicken-bootstrap) '(spotless clean confclean)))
 
         ;; make boot-chicken
-        (make (common-params chicken-bootstrap) build-params '(boot-chicken))
+        (make (append (common-params chicken-bootstrap) build-params '(boot-chicken))
+	  timeout: (timeout/chicken-build))
 
         ((after-make-bootstrap-hook) chicken-core-dir)
         (change-directory chicken-core-dir)
 
         ;; make spotless
-        (make (common-params "./chicken-boot") '(spotless))
+        (make (append (common-params "./chicken-boot") '(spotless)))
 
         ;; make all
-        (make (common-params "./chicken-boot") build-params '(all))
+        (make (append (common-params "./chicken-boot") build-params '(all))
+	  timeout: (timeout/chicken-build))
 
         ;; make install
-        (make (common-params "./chicken-boot") '(install))
+        (make (append (common-params "./chicken-boot") '(install))
+	  timeout: (timeout/chicken-install))
 
         ;; make check
-        (make (common-params "./chicken-boot") '(check))
+        (make (append (common-params "./chicken-boot") '(check))
+	  timeout: (timeout/chicken-test))
 
         ((after-make-check-hook) chicken-prefix)
         (change-directory chicken-core-dir)))))
@@ -464,7 +485,10 @@
                (! (salmonella-program) args
                   dir: (tmp-dir)
                   abort-on-non-zero?: #f
-                  publish-dir: (tmp-dir))))
+                  publish-dir: (tmp-dir)
+		  timeout: (if (keep-repo?)
+			       (timeout/salmonella-cached)
+			       (timeout/salmonella-not-cached)))))
           (when restore-setup-defaults
             (move-file (cdr restore-setup-defaults)
                        (car restore-setup-defaults)
