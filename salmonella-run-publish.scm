@@ -197,9 +197,12 @@
           (for-each print missing-programs)))
       (exit 1))))
 
+(define (current-time)
+  (time->string (seconds->local-time)))
 
 (define (report step fmt . args)
-  (apply printf (cons (string-append "[~a] " fmt "\n") (cons step args))))
+  (apply printf (cons (string-append "~a [~a] " fmt "\n")
+                      (append (list (current-time) step) args))))
 
 (define (pad-number n zeroes)
   (define (pad num len)
@@ -273,7 +276,7 @@
                    (let loop ()
                      (let ((line (read-line in)))
                        (unless (eof-object? line)
-                         (print line)
+                         (printf "~a ~a\n" (current-time) line)
                          (loop))))
                    #f))))
         (let-values (((pid exit-normal? status) (process-wait pid)))
