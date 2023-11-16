@@ -1,0 +1,7 @@
+*.o
+*.so
+*.link
+*.build.sh
+*.install.sh
+*.import.scm
+salmonella-run-publish
