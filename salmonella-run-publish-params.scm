@@ -4,8 +4,7 @@
   web-dir verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
-  run-salmonella? hanging-process-killer-program
-  hanging-process-killer-program-args salmonella-path
+  run-salmonella? salmonella-path
   list-eggs pre-built-chicken instances debug-build? optimize-for-speed?
   git-clone-depth make-jobs
 
@@ -183,19 +182,6 @@
 
 (define run-salmonella?
   (make-parameter #t))
-
-(define hanging-process-killer-program
-  (make-parameter #f))
-
-(define hanging-process-killer-program-args
-  ;; Arguments for hanging-process-killer-program.
-  ;; Example (for https://github.com/mario-goulart/kill-hanging-children):
-  ;;   (hanging-process-killer-program-args
-  ;;     (lambda (pid publish-dir)
-  ;;       (list pid publish-dir)))
-  (make-parameter
-   (lambda (pid publish-dir)
-     '())))
 
 (define salmonella-path
   ;; Path to the salmonella binary.  #f means "use salmonella from

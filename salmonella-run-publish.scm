@@ -30,8 +30,6 @@
 ;; - graphviz (dot program, for dependencies graphs generation -- salmonella-html-report)
 ;; - tar
 ;; - gzip
-;; - If hanging-process-killer-program is set, salmonella-run-publish
-;;   will check if it is available.
 ;; - timeout
 
 ;; TODO
@@ -172,9 +170,6 @@
                       '()
                       '("csi"
                         "chicken"))
-                  (if (hanging-process-killer-program)
-                      `(,(program-path (hanging-process-killer-program)))
-                      '())
                   (if (chicken-source-dir)
                       '()
                       (list "git"))
@@ -233,16 +228,6 @@
     (append (get-environment-variables)
             vars/vals))))
 
-(define (run-kill-hanging-children pid publish-dir)
-  (system
-   (sprintf "~a ~a &"
-            (program-path (hanging-process-killer-program))
-            (string-intersperse
-             (map ->string
-                  ((hanging-process-killer-program-args)
-                   pid (make-pathname publish-dir
-                                      "hanging-processes.log")))))))
-
 (define (! cmd args #!key dir publish-dir (env '()) (abort-on-non-zero? #t) collect-output timeout)
   (let ((args (map ->string args))
         (cwd (and dir (current-directory)))
@@ -267,8 +252,6 @@
 		      (process (find-program cmd)
 			       args
 			       (reuse-environment env)))))
-      (when (and publish-dir (hanging-process-killer-program))
-	(run-kill-hanging-children pid publish-dir))
       (let ((output
              (if collect-output
                  (with-input-from-port in read-string)
@@ -645,7 +628,6 @@
          (append
           (list
            (string-append (log-file) "z")
-           "hanging-processes.log"
            "salmonella-report"
            "salmonella.log.bz2")
           (if commit-hash
