@@ -726,7 +726,8 @@ EOF
                (set! %work-dir (cadr args))
                (loop (cddr args)))
               (else
-               (set! config-files (append config-files (list arg))))))))
+               (set! config-files (append config-files (list arg)))
+               (loop (cdr args)))))))
 
   ;; Load config file if provided
   (for-each load config-files)
