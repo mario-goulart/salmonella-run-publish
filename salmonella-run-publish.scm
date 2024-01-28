@@ -295,7 +295,6 @@
         (begin
           (! "git" '(fetch --all) dir: chicken-core-dir)
           (! "git" `(checkout ,(chicken-core-branch)) dir: chicken-core-dir)
-          (! "git" '(pull) dir: chicken-core-dir)
           (! "git" '(clean -f) dir: chicken-core-dir)
           (! "git" '(checkout -f) dir: chicken-core-dir)
           (when commit-hash
