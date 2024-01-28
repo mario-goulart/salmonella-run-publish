@@ -11,8 +11,7 @@
                salmonella-html-report
                srfi-1
                srfi-13)
- (test-dependencies simple-sha1
-                    test)
+ (test-dependencies test)
  (component-options
   (csc-options "-O0" "-d3"))
  (components (extension salmonella-run-publish-params)
