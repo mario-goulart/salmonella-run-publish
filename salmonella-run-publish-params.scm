@@ -1,7 +1,7 @@
 (module salmonella-run-publish-params
  (work-dir chicken-bootstrap-prefix chicken-core-git-uri
   chicken-core-branch make-program keep-repo? skip-eggs henrietta-uri
-  web-dir verbose? compress-report? c-compiler c++-compiler
+  web-dir uri-root verbose? compress-report? c-compiler c++-compiler
   branch-publish-transformer c-compiler-publish-name feeds-server
   create-report-tarball salmonella-diff-link-mode? chicken-release
   run-salmonella? salmonella-path
@@ -130,6 +130,9 @@
   ;; Directory where to publish the salmonella report
   (make-parameter
    (make-pathname (current-directory) "salmonella-reports")))
+
+; Where should URIs be rooted?
+(define uri-root (make-parameter "/"))
 
 (define verbose?
   (make-parameter #t))

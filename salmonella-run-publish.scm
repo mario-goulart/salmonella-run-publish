@@ -782,17 +782,17 @@ EOF
          (yesterday-year (number->string (+ 1900 (vector-ref yesterday 5))))
          (yesterday-dir (make-pathname (list yesterday-year yesterday-month)
                                        yesterday-day))
-         (yesterday-web-dir (make-absolute-pathname path-layout yesterday-dir))
+         (yesterday-web-dir (make-absolute-pathname (list (uri-root) path-layout) yesterday-dir))
 
          ;; Final publishing directory (filesystem), with yyyy/mm/dd
          (publish-dir (make-pathname publish-base-dir today-dir))
 
          ;; Final web publishing directory, with yyyy/mm/dd
-         (publish-web-dir (make-absolute-pathname path-layout today-dir))
+         (publish-web-dir (make-absolute-pathname (list (uri-root) path-layout) today-dir))
 
          ;; Feeds stuff
          (feeds-dir (make-pathname (list (web-dir) "feeds") path-layout))
-         (feeds-web-dir (make-absolute-pathname "feeds" path-layout)))
+         (feeds-web-dir (make-absolute-pathname (list (uri-root) "feeds") path-layout)))
 
     (handle-exceptions exn
       (begin
