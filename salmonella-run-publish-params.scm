@@ -138,7 +138,10 @@
   (make-parameter #t))
 
 (define c-compiler
-  (make-parameter "gcc"))
+  ;; OpenBSD renamed gcc to egcc at some point (maybe in 7.0?)
+  (if (eq? (software-version) 'openbsd)
+      (make-parameter "egcc")
+      (make-parameter "gcc")))
 
 (define c++-compiler
   (make-parameter "g++"))
