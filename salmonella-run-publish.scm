@@ -241,7 +241,7 @@
                   (if timeout
                       (process (find-program "timeout")
                                (append
-                                (if (eq? (sofware-version) 'linux)
+                                (if (eq? (software-version) 'linux)
                                     '("-v")
                                     '())
                                 (list "-k"
