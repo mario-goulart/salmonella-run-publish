@@ -238,20 +238,23 @@
       (report 'CD (current-directory)))
     (report 'RUN cmd-line)
     (let-values (((in out pid)
-		  (if timeout
-		      (process (find-program "timeout")
-			       (append (list "-v"
-					     "-k"
-					     (or (and-let* ((t (timeout/kill)))
-						   (number->string t))
-						 "60")
-					     (number->string timeout)
-					     (find-program cmd))
-				       args)
-			       (reuse-environment env))
-		      (process (find-program cmd)
-			       args
-			       (reuse-environment env)))))
+                  (if timeout
+                      (process (find-program "timeout")
+                               (append
+                                (if (eq? (sofware-version) 'linux)
+                                    '("-v")
+                                    '())
+                                (list "-k"
+                                      (or (and-let* ((t (timeout/kill)))
+                                            (number->string t))
+                                          "60")
+                                      (number->string timeout)
+                                      (find-program cmd))
+                                args)
+                               (reuse-environment env))
+                      (process (find-program cmd)
+                               args
+                               (reuse-environment env)))))
       (let ((output
              (if collect-output
                  (with-input-from-port in read-string)
