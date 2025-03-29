@@ -358,7 +358,7 @@
 
         ;; make boot-chicken
         (make (append (common-params chicken-bootstrap) build-params '(boot-chicken))
-	  timeout: (timeout/chicken-build))
+          timeout: (timeout/chicken-build))
 
         ((after-make-bootstrap-hook) chicken-core-dir)
         (change-directory chicken-core-dir)
@@ -368,15 +368,15 @@
 
         ;; make all
         (make (append (common-params "./chicken-boot") build-params '(all))
-	  timeout: (timeout/chicken-build))
+          timeout: (timeout/chicken-build))
 
         ;; make install
         (make (append (common-params "./chicken-boot") '(install))
-	  timeout: (timeout/chicken-install))
+          timeout: (timeout/chicken-install))
 
         ;; make check
         (make (append (common-params "./chicken-boot") '(check))
-	  timeout: (timeout/chicken-test))
+          timeout: (timeout/chicken-test))
 
         ((after-make-check-hook) chicken-prefix)
         (change-directory chicken-core-dir)))))
@@ -472,9 +472,9 @@
                   dir: (work-dir)
                   abort-on-non-zero?: #f
                   publish-dir: (work-dir)
-		  timeout: (if (keep-repo?)
-			       (timeout/salmonella-cached)
-			       (timeout/salmonella-not-cached)))))
+                  timeout: (if (keep-repo?)
+                               (timeout/salmonella-cached)
+                               (timeout/salmonella-not-cached)))))
           (when restore-setup-defaults
             (move-file (cdr restore-setup-defaults)
                        (car restore-setup-defaults)
@@ -511,21 +511,21 @@
         (today-log (make-pathname (work-dir) "salmonella.log")))
     (when yesterday-log
       (! (program-path "salmonella-diff")
-	 (append
-	  `(--out-dir=yesterday-diff
-	    --label1=Yesterday
-	    --label2=Today)
-	  (if (salmonella-diff-link-mode?)
-	      (list
-	       (string-append "--report-uri1="
-			      (make-pathname yesterday-web-dir
-					     "salmonella-report"))
-	       (string-append "--report-uri2="
-			      (make-pathname publish-web-dir
-					     "salmonella-report")))
-	      '())
-	  (list yesterday-log
-		today-log))
+         (append
+          `(--out-dir=yesterday-diff
+            --label1=Yesterday
+            --label2=Today)
+          (if (salmonella-diff-link-mode?)
+              (list
+               (string-append "--report-uri1="
+                              (make-pathname yesterday-web-dir
+                                             "salmonella-report"))
+               (string-append "--report-uri2="
+                              (make-pathname publish-web-dir
+                                             "salmonella-report")))
+              '())
+          (list yesterday-log
+                today-log))
          abort-on-non-zero?: #f
          dir: (work-dir)))))
 
